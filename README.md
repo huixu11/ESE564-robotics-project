@@ -74,3 +74,33 @@ python scripts/run_demo.py --config configs/mujoco_template.yaml --episodes 3 --
 ```
 
 The FSM and data collection scripts use the same `(dx, dy, dz, gripper)` action interface for both environments.
+
+## Class Panda Assets
+
+Homework assets from `hw/hw2 (1).zip` were extracted into `assets/class_panda/`.
+The scene at `assets/class_panda/basket_scene.mjcf` uses the homework Panda
+MJCF/meshes and official YCB Google 16k visual meshes for:
+
+- `003_cracker_box`
+- `006_mustard_bottle`
+
+Run the class-asset scene:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\check_mujoco_setup.py --config configs\class_panda.yaml
+.\.venv\Scripts\python.exe scripts\run_demo.py --config configs\class_panda.yaml --episodes 3 --save-video videos\class_panda_demo.gif
+```
+
+Collect demonstrations and train the smoke BC baseline:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\collect_demos.py --config configs\class_panda.yaml --episodes 100 --out data\class_panda_demos --no-images
+.\.venv\Scripts\python.exe scripts\train_bc.py --data data\class_panda_demos --out models\class_panda_linear_bc.npz
+```
+
+Current measured status on the class scene:
+
+- FSM: `20/20` evaluation successes, average `88.15` steps.
+- NumPy linear BC smoke baseline: `0/20` evaluation successes.
+
+Use FSM as the final executor unless the BC policy is upgraded enough to pass the proposal's 60% threshold.

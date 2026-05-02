@@ -1,0 +1,9 @@
+*.obj -text
+*.dae -text
+*.ply -text
+*.stl -text
+*.png -text
+*.tgz -text
+*.mjcf text eol=lf
+*.xml text eol=lf
+*.mtl text eol=lf

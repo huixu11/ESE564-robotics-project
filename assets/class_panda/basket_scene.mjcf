@@ -1,0 +1,44 @@
+<mujoco model="class_panda_basket_sorting">
+  <include file="assets/Panda/panda.mjcf"/>
+
+  <asset>
+    <material name="cracker_mat" rgba="0.78 0.24 0.16 1"/>
+    <material name="mustard_mat" rgba="0.95 0.76 0.12 1"/>
+    <material name="left_basket_mat" rgba="0.20 0.47 0.78 0.35"/>
+    <material name="right_basket_mat" rgba="0.24 0.62 0.35 0.35"/>
+    <mesh name="ycb_cracker_box" file="../ycb/003_cracker_box/google_16k/textured.obj"/>
+    <mesh name="ycb_mustard_bottle" file="../ycb/006_mustard_bottle/google_16k/textured.obj"/>
+  </asset>
+
+  <worldbody>
+    <camera name="overhead" pos="0.35 0 1.45" xyaxes="1 0 0 0 1 0" fovy="42"/>
+
+    <body name="cracker_box" pos="0.35 -0.1 0.04">
+      <freejoint name="cracker_box_freejoint"/>
+      <geom name="cracker_box_geom" type="box" size="0.035 0.025 0.055" material="cracker_mat" mass="0.12"/>
+      <geom name="cracker_box_visual" type="mesh" mesh="ycb_cracker_box" contype="0" conaffinity="0" group="2"/>
+    </body>
+
+    <body name="mustard_bottle" pos="0.45 -0.1 0.055">
+      <freejoint name="mustard_bottle_freejoint"/>
+      <geom name="mustard_bottle_geom" type="cylinder" size="0.028 0.075" material="mustard_mat" mass="0.15"/>
+      <geom name="mustard_bottle_visual" type="mesh" mesh="ycb_mustard_bottle" contype="0" conaffinity="0" group="2"/>
+    </body>
+
+    <body name="left_basket" pos="0.25 0.28 0.035">
+      <geom name="left_basket_floor" type="box" size="0.11 0.11 0.008" material="left_basket_mat" contype="0" conaffinity="0"/>
+      <geom name="left_basket_back" type="box" pos="0 0.11 0.04" size="0.11 0.006 0.045" material="left_basket_mat"/>
+      <geom name="left_basket_front" type="box" pos="0 -0.11 0.04" size="0.11 0.006 0.045" material="left_basket_mat"/>
+      <geom name="left_basket_left" type="box" pos="-0.11 0 0.04" size="0.006 0.11 0.045" material="left_basket_mat"/>
+      <geom name="left_basket_right" type="box" pos="0.11 0 0.04" size="0.006 0.11 0.045" material="left_basket_mat"/>
+    </body>
+
+    <body name="right_basket" pos="0.55 0.28 0.035">
+      <geom name="right_basket_floor" type="box" size="0.11 0.11 0.008" material="right_basket_mat" contype="0" conaffinity="0"/>
+      <geom name="right_basket_back" type="box" pos="0 0.11 0.04" size="0.11 0.006 0.045" material="right_basket_mat"/>
+      <geom name="right_basket_front" type="box" pos="0 -0.11 0.04" size="0.11 0.006 0.045" material="right_basket_mat"/>
+      <geom name="right_basket_left" type="box" pos="-0.11 0 0.04" size="0.006 0.11 0.045" material="right_basket_mat"/>
+      <geom name="right_basket_right" type="box" pos="0.11 0 0.04" size="0.006 0.11 0.045" material="right_basket_mat"/>
+    </body>
+  </worldbody>
+</mujoco>

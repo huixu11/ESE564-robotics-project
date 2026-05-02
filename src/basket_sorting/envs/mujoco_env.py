@@ -32,7 +32,8 @@ class _ResolvedNames:
     object_free_joint_ids: dict[str, int]
     object_free_qpos_addr: dict[str, int]
     basket_body_ids: dict[str, int]
-    ee_site_id: int
+    ee_site_id: int | None
+    ee_body_id: int | None
     camera_id: int | None
 
 
@@ -48,14 +49,23 @@ class MujocoPandaKinematics:
     def forward(self, qpos: np.ndarray) -> np.ndarray:
         self.data.qpos[self.names.arm_qpos_addr] = np.asarray(qpos, dtype=float)
         self.mujoco.mj_forward(self.model, self.data)
-        return np.asarray(self.data.site_xpos[self.names.ee_site_id], dtype=float).copy()
+        if self.names.ee_site_id is not None:
+            return np.asarray(self.data.site_xpos[self.names.ee_site_id], dtype=float).copy()
+        if self.names.ee_body_id is not None:
+            return np.asarray(self.data.xpos[self.names.ee_body_id], dtype=float).copy()
+        raise RuntimeError("No end-effector site or body was configured.")
 
     def jacobian(self, qpos: np.ndarray) -> np.ndarray:
         self.data.qpos[self.names.arm_qpos_addr] = np.asarray(qpos, dtype=float)
         self.mujoco.mj_forward(self.model, self.data)
         jacp = np.zeros((3, self.model.nv), dtype=float)
         jacr = np.zeros((3, self.model.nv), dtype=float)
-        self.mujoco.mj_jacSite(self.model, self.data, jacp, jacr, self.names.ee_site_id)
+        if self.names.ee_site_id is not None:
+            self.mujoco.mj_jacSite(self.model, self.data, jacp, jacr, self.names.ee_site_id)
+        elif self.names.ee_body_id is not None:
+            self.mujoco.mj_jacBody(self.model, self.data, jacp, jacr, self.names.ee_body_id)
+        else:
+            raise RuntimeError("No end-effector site or body was configured.")
         return jacp[:, self.names.arm_dof_addr]
 
 
@@ -254,7 +264,23 @@ class MujocoBasketSortingEnv:
             name: self._name_id(self.mujoco.mjtObj.mjOBJ_BODY, body_name)
             for name, body_name in self.mj_cfg.get("basket_body_names", {}).items()
         }
-        ee_site_id = self._name_id(self.mujoco.mjtObj.mjOBJ_SITE, self.mj_cfg["ee_site"])
+        ee_site_name = self.mj_cfg.get("ee_site")
+        ee_body_name = self.mj_cfg.get("ee_body")
+        ee_site_id = (
+            self._name_id(self.mujoco.mjtObj.mjOBJ_SITE, ee_site_name, required=False)
+            if ee_site_name
+            else -1
+        )
+        ee_body_id = (
+            self._name_id(self.mujoco.mjtObj.mjOBJ_BODY, ee_body_name, required=False)
+            if ee_body_name
+            else -1
+        )
+        if ee_site_id < 0 and ee_body_id < 0:
+            raise KeyError(
+                "Configured end-effector was not found. Set env.mujoco.ee_site or env.mujoco.ee_body "
+                f"to a valid MuJoCo site/body name in {self.model_xml}."
+            )
         camera_name = self.mj_cfg.get("camera_name")
         camera_id = (
             self._name_id(self.mujoco.mjtObj.mjOBJ_CAMERA, camera_name, required=False)
@@ -273,7 +299,8 @@ class MujocoBasketSortingEnv:
             object_free_joint_ids=object_free_joint_ids,
             object_free_qpos_addr=object_free_qpos_addr,
             basket_body_ids=basket_body_ids,
-            ee_site_id=ee_site_id,
+            ee_site_id=ee_site_id if ee_site_id >= 0 else None,
+            ee_body_id=ee_body_id if ee_body_id >= 0 else None,
             camera_id=camera_id,
         )
 
@@ -360,7 +387,11 @@ class MujocoBasketSortingEnv:
 
     def _ee_pos(self) -> np.ndarray:
         self.mujoco.mj_forward(self.model, self.data)
-        return np.asarray(self.data.site_xpos[self.names.ee_site_id], dtype=float).copy()
+        if self.names.ee_site_id is not None:
+            return np.asarray(self.data.site_xpos[self.names.ee_site_id], dtype=float).copy()
+        if self.names.ee_body_id is not None:
+            return np.asarray(self.data.xpos[self.names.ee_body_id], dtype=float).copy()
+        raise RuntimeError("No end-effector site or body was configured.")
 
     def _object_pos(self, name: str) -> np.ndarray:
         body_id = self.names.object_body_ids[name]

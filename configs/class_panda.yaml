@@ -1,0 +1,53 @@
+env:
+  name: mujoco
+  table_bounds:
+    x: [0.22, 0.58]
+    y: [-0.24, 0.10]
+  workspace_bounds:
+    x: [0.05, 0.75]
+    y: [-0.45, 0.45]
+    z: [0.02, 0.75]
+  safe_z: 0.34
+  grasp_z: 0.085
+  place_z: 0.11
+  basket_poses:
+    left: [0.25, 0.28, 0.035]
+    right: [0.55, 0.28, 0.035]
+  mujoco:
+    model_xml: assets/class_panda/basket_scene.mjcf
+    ee_site: null
+    ee_body: panda_hand
+    camera_name: overhead
+    control_substeps: 8
+    direct_joint_position: true
+    initial_qpos: [0.0, -0.75, 0.0, -2.35, 0.0, 1.65, 0.78]
+    arm_joint_names:
+      - panda_joint1
+      - panda_joint2
+      - panda_joint3
+      - panda_joint4
+      - panda_joint5
+      - panda_joint6
+      - panda_joint7
+    arm_actuator_names:
+      - panda_joint1_pos
+      - panda_joint2_pos
+      - panda_joint3_pos
+      - panda_joint4_pos
+      - panda_joint5_pos
+      - panda_joint6_pos
+      - panda_joint7_pos
+    gripper_actuator_names:
+      - panda_finger_joint1_pos
+      - panda_finger_joint2_pos
+    open_gripper_ctrl: 0.04
+    closed_gripper_ctrl: 0.0
+    object_body_names:
+      cracker_box: cracker_box
+      mustard_bottle: mustard_bottle
+    object_free_joint_names:
+      cracker_box: cracker_box_freejoint
+      mustard_bottle: mustard_bottle_freejoint
+    basket_body_names:
+      left: left_basket
+      right: right_basket
