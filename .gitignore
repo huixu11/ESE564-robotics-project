@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+data/*/
+models/*.npz
+runs/*.json
+videos/*.gif
+
+!data/README.md
+!models/README.md
+!runs/README.md
+!videos/README.md

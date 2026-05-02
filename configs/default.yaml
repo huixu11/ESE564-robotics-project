@@ -1,0 +1,59 @@
+seed: 7
+
+env:
+  name: kinematic
+  dt: 0.05
+  max_steps: 240
+  table_bounds:
+    x: [-0.45, 0.45]
+    y: [-0.35, 0.35]
+  workspace_bounds:
+    x: [-0.6, 0.6]
+    y: [-0.45, 0.45]
+    z: [0.02, 0.45]
+  safe_z: 0.28
+  grasp_z: 0.055
+  place_z: 0.07
+  grasp_radius: 0.055
+  basket_half_extent: 0.105
+  object_names:
+    - cracker_box
+    - mustard_bottle
+  basket_poses:
+    left: [-0.25, 0.28, 0.0]
+    right: [0.25, 0.28, 0.0]
+  camera:
+    width: 160
+    height: 160
+
+controller:
+  damping: 0.05
+  max_ee_step: 0.035
+  max_joint_step: 0.04
+  max_joint_jump: 0.12
+  joint_limits:
+    - [-0.6, 0.6]
+    - [-0.45, 0.45]
+    - [0.02, 0.45]
+    - [-2.9, 2.9]
+    - [-2.9, 2.9]
+    - [-2.9, 2.9]
+    - [-2.9, 2.9]
+
+fsm:
+  tolerance: 0.018
+  grasp_hold_steps: 8
+  release_hold_steps: 8
+  retreat_steps: 8
+  speed_to_step:
+    careful: 0.018
+    normal: 0.026
+    fast: 0.034
+
+data:
+  save_images: true
+  image_format: png
+  keep_success_only: true
+
+training:
+  ridge_lambda: 0.001
