@@ -1,0 +1,97 @@
+<mujoco model="basket_sorting_panda_cartesian_standin">
+  <compiler angle="radian" inertiafromgeom="true"/>
+  <option timestep="0.004" gravity="0 0 -9.81"/>
+
+  <default>
+    <joint damping="1.0" armature="0.01" limited="true"/>
+    <geom condim="3" friction="1.0 0.05 0.005" rgba="0.7 0.7 0.7 1"/>
+    <position kp="300"/>
+  </default>
+
+  <asset>
+    <material name="table_mat" rgba="0.72 0.68 0.58 1"/>
+    <material name="panda_white" rgba="0.86 0.86 0.82 1"/>
+    <material name="panda_dark" rgba="0.12 0.13 0.14 1"/>
+    <material name="cracker_mat" rgba="0.78 0.24 0.16 1"/>
+    <material name="mustard_mat" rgba="0.95 0.76 0.12 1"/>
+    <material name="left_basket_mat" rgba="0.20 0.47 0.78 0.35"/>
+    <material name="right_basket_mat" rgba="0.24 0.62 0.35 0.35"/>
+  </asset>
+
+  <worldbody>
+    <light name="key" pos="0 -0.6 1.5" dir="0 0 -1" diffuse="0.8 0.8 0.8"/>
+    <camera name="overhead" pos="0 0 1.45" xyaxes="1 0 0 0 1 0" fovy="42"/>
+    <geom name="table" type="box" pos="0 0 -0.015" size="0.72 0.52 0.015" material="table_mat"/>
+
+    <body name="panda_base" pos="0 0 0">
+      <geom name="base_geom" type="cylinder" pos="0 -0.34 0.015" size="0.075 0.03" material="panda_dark"/>
+      <body name="panda_x_axis">
+        <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
+        <joint name="panda_joint1" type="slide" axis="1 0 0" range="-0.6 0.6"/>
+        <body name="panda_y_axis">
+          <inertial pos="0 0 0" mass="0.1" diaginertia="0.001 0.001 0.001"/>
+          <joint name="panda_joint2" type="slide" axis="0 1 0" range="-0.45 0.45"/>
+          <body name="panda_z_axis">
+            <inertial pos="0 0 0" mass="0.2" diaginertia="0.002 0.002 0.002"/>
+            <joint name="panda_joint3" type="slide" axis="0 0 1" range="0.02 0.45"/>
+            <joint name="panda_joint4" type="hinge" axis="0 0 1" range="-3.0718 -0.0698"/>
+            <joint name="panda_joint5" type="hinge" axis="1 0 0" range="-2.8973 2.8973"/>
+            <joint name="panda_joint6" type="hinge" axis="0 1 0" range="-0.0175 3.7525"/>
+            <joint name="panda_joint7" type="hinge" axis="1 0 0" range="-2.8973 2.8973"/>
+            <geom name="vertical_column" type="capsule" fromto="0 0 0 0 0 -0.12" size="0.015" material="panda_white" contype="0" conaffinity="0"/>
+            <body name="panda_hand" pos="0 0 0">
+              <site name="panda_hand_tcp" pos="0 0 0" size="0.012" rgba="1 0 0 1"/>
+              <geom name="hand_geom" type="box" pos="0 0 0" size="0.035 0.025 0.018" material="panda_dark" contype="0" conaffinity="0"/>
+              <body name="left_finger" pos="0 0.025 -0.025">
+                <joint name="panda_finger_joint1" type="slide" axis="0 1 0" range="0 0.04"/>
+                <geom type="box" size="0.008 0.006 0.035" material="panda_dark" contype="0" conaffinity="0"/>
+              </body>
+              <body name="right_finger" pos="0 -0.025 -0.025">
+                <joint name="panda_finger_joint2" type="slide" axis="0 -1 0" range="0 0.04"/>
+                <geom type="box" size="0.008 0.006 0.035" material="panda_dark" contype="0" conaffinity="0"/>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <body name="cracker_box" pos="-0.12 -0.08 0.04">
+      <freejoint name="cracker_box_freejoint"/>
+      <geom name="cracker_box_geom" type="box" size="0.035 0.025 0.055" material="cracker_mat" mass="0.12"/>
+    </body>
+
+    <body name="mustard_bottle" pos="0.12 -0.08 0.055">
+      <freejoint name="mustard_bottle_freejoint"/>
+      <geom name="mustard_bottle_geom" type="cylinder" size="0.028 0.075" material="mustard_mat" mass="0.15"/>
+    </body>
+
+    <body name="left_basket" pos="-0.25 0.28 0.035">
+      <geom name="left_basket_floor" type="box" size="0.11 0.11 0.008" material="left_basket_mat" contype="0" conaffinity="0"/>
+      <geom name="left_basket_back" type="box" pos="0 0.11 0.04" size="0.11 0.006 0.045" material="left_basket_mat"/>
+      <geom name="left_basket_front" type="box" pos="0 -0.11 0.04" size="0.11 0.006 0.045" material="left_basket_mat"/>
+      <geom name="left_basket_left" type="box" pos="-0.11 0 0.04" size="0.006 0.11 0.045" material="left_basket_mat"/>
+      <geom name="left_basket_right" type="box" pos="0.11 0 0.04" size="0.006 0.11 0.045" material="left_basket_mat"/>
+    </body>
+
+    <body name="right_basket" pos="0.25 0.28 0.035">
+      <geom name="right_basket_floor" type="box" size="0.11 0.11 0.008" material="right_basket_mat" contype="0" conaffinity="0"/>
+      <geom name="right_basket_back" type="box" pos="0 0.11 0.04" size="0.11 0.006 0.045" material="right_basket_mat"/>
+      <geom name="right_basket_front" type="box" pos="0 -0.11 0.04" size="0.11 0.006 0.045" material="right_basket_mat"/>
+      <geom name="right_basket_left" type="box" pos="-0.11 0 0.04" size="0.006 0.11 0.045" material="right_basket_mat"/>
+      <geom name="right_basket_right" type="box" pos="0.11 0 0.04" size="0.006 0.11 0.045" material="right_basket_mat"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="panda_joint1" joint="panda_joint1" kp="300" ctrlrange="-0.6 0.6"/>
+    <position name="panda_joint2" joint="panda_joint2" kp="300" ctrlrange="-0.45 0.45"/>
+    <position name="panda_joint3" joint="panda_joint3" kp="300" ctrlrange="0.02 0.45"/>
+    <position name="panda_joint4" joint="panda_joint4" kp="80" ctrlrange="-3.0718 -0.0698"/>
+    <position name="panda_joint5" joint="panda_joint5" kp="80" ctrlrange="-2.8973 2.8973"/>
+    <position name="panda_joint6" joint="panda_joint6" kp="80" ctrlrange="-0.0175 3.7525"/>
+    <position name="panda_joint7" joint="panda_joint7" kp="80" ctrlrange="-2.8973 2.8973"/>
+    <position name="panda_finger_joint1" joint="panda_finger_joint1" kp="60" ctrlrange="0 0.04"/>
+    <position name="panda_finger_joint2" joint="panda_finger_joint2" kp="60" ctrlrange="0 0.04"/>
+  </actuator>
+</mujoco>

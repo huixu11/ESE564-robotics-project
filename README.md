@@ -10,7 +10,7 @@ This folder contains a runnable scaffold for the project proposal:
 - lightweight behavior cloning baseline,
 - evaluation and GIF generation.
 
-The current repository does not include the class Panda MuJoCo model, YCB meshes, homework IK wrapper, MuJoCo, PyTorch, or CLIP. For that reason, the implemented default environment is a deterministic kinematic fallback that uses the same interfaces planned for MuJoCo. The MuJoCo integration point is isolated in `src/basket_sorting/envs/mujoco_env.py`.
+The current repository does not include the private class Panda MuJoCo model, true YCB meshes, or homework IK wrapper. For that reason, the default environment is a deterministic kinematic fallback, and `assets/mujoco/scene.xml` is a local Panda/YCB-named MuJoCo stand-in for setup and pipeline testing. The MuJoCo integration point is isolated in `src/basket_sorting/envs/mujoco_env.py`.
 
 ## Quick Start
 
@@ -56,11 +56,21 @@ python -m unittest discover -s tests
 
 ## MuJoCo Integration
 
-After copying the class Panda MuJoCo model and homework IK wrapper into this folder:
+The repository includes a local MuJoCo stand-in at `assets/mujoco/scene.xml`. To use the private class assets instead:
 
-1. Replace or extend `MujocoBasketSortingEnv`.
-2. Keep the same environment API as `KinematicBasketSortingEnv`.
-3. Reuse `DifferentialIKController` if the wrapper exposes FK/Jacobian functions.
-4. Keep the action interface as `(dx, dy, dz, gripper)`.
+1. Install MuJoCo: `python -m pip install mujoco`.
+2. Copy the class scene to `assets/mujoco/scene.xml`, or edit `configs/mujoco_template.yaml`.
+3. Make sure the joint/site/body/actuator names in `configs/mujoco_template.yaml` match the XML.
+4. Validate the setup:
 
-The FSM and data collection scripts should not need major changes if the MuJoCo environment preserves the same observation and step contracts.
+```powershell
+python scripts/check_mujoco_setup.py --config configs/mujoco_template.yaml
+```
+
+5. Run the FSM with the MuJoCo config:
+
+```powershell
+python scripts/run_demo.py --config configs/mujoco_template.yaml --episodes 3 --save-video videos/mujoco_demo.gif
+```
+
+The FSM and data collection scripts use the same `(dx, dy, dz, gripper)` action interface for both environments.

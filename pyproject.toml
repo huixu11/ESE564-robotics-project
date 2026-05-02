@@ -13,5 +13,10 @@ dependencies = [
   "pyyaml",
 ]
 
+[project.optional-dependencies]
+mujoco = [
+  "mujoco",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]

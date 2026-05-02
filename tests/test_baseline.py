@@ -49,6 +49,15 @@ class BaselineTests(unittest.TestCase):
         self.assertTrue(result.success)
         self.assertLess(result.steps, config["env"]["max_steps"])
 
+    def test_mujoco_config_fails_clearly_when_dependency_missing(self) -> None:
+        config = load_config()
+        config["env"]["name"] = "mujoco"
+        try:
+            import mujoco  # noqa: F401
+        except ImportError:
+            with self.assertRaisesRegex(RuntimeError, "MuJoCo is not installed"):
+                make_env(config)
+
 
 if __name__ == "__main__":
     unittest.main()
