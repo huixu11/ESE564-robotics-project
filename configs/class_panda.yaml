@@ -1,5 +1,6 @@
 env:
   name: mujoco
+  max_steps: 320
   table_bounds:
     x: [0.22, 0.58]
     y: [-0.24, 0.10]
@@ -11,9 +12,28 @@ env:
   grasp_z: 0.085
   place_z: 0.11
   object_min_distance: 0.19
+  basket_half_extent: 0.105
+  grasp_radius: 0.055
   camera:
     width: 320
     height: 320
+  perception:
+    enabled: true
+    camera_name: demo_view
+    min_pixels: 20
+    image_to_world_affine:
+      - [0.0017647, -0.00378195, 0.60149898]
+      - [-0.00268734, -0.00116214, 0.62269681]
+  push:
+    push_z: 0.20
+    start_offset: 0.10
+    goal_overshoot: 0.05
+    push_steps: 230
+  physics_push:
+    enabled: true
+    radius: 10.0
+    force: 20.0
+    velocity: 0.14
   basket_poses:
     left: [0.25, 0.28, 0.035]
     right: [0.55, 0.28, 0.035]

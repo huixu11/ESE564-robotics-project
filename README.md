@@ -4,13 +4,14 @@ This folder contains a runnable scaffold for the project proposal:
 
 - language task parsing,
 - randomized basket-sorting environment,
-- scripted FSM expert,
+- scripted pick-and-place and pushing FSM experts,
+- color-based camera perception for the final MuJoCo path,
 - differential IK / continuity-aware controller,
 - demonstration collection,
 - lightweight behavior cloning baseline,
 - evaluation and GIF generation.
 
-The current repository does not include the private class Panda MuJoCo model, true YCB meshes, or homework IK wrapper. For that reason, the default environment is a deterministic kinematic fallback, and `assets/mujoco/scene.xml` is a local Panda/YCB-named MuJoCo stand-in for setup and pipeline testing. The MuJoCo integration point is isolated in `src/basket_sorting/envs/mujoco_env.py`.
+The default environment is a deterministic kinematic fallback for quick tests. The final class Panda path uses assets in `assets/class_panda/`, color perception from rendered RGB frames, and `push_fsm` contact-style pushing in MuJoCo.
 
 ## Quick Start
 
@@ -40,10 +41,10 @@ Evaluate FSM:
 python scripts/evaluate.py --policy fsm --episodes 25 --out runs/fsm_eval.json
 ```
 
-Run an explicit language command:
+Run an explicit language command with the final pushing executor:
 
 ```powershell
-python scripts/evaluate.py --policy fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/language_command_demo.gif
+python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/language_command_demo.gif
 ```
 
 Saved GIFs include a top caption such as `Language: place the mustard bottle in
@@ -120,8 +121,8 @@ Example demo commands:
 The same language command can also be passed to the main evaluation script:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda.yaml --policy fsm --instruction "place the cracker box in the left basket" --episodes 3 --out runs\language_red_to_blue.json --save-video videos\language_red_to_blue.gif --video-episodes 3
-.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda.yaml --policy fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --out runs\language_yellow_to_green.json --save-video videos\language_yellow_to_green.gif --video-episodes 3
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda.yaml --policy push_fsm --instruction "place the cracker box in the left basket" --episodes 3 --out runs\push_language_red_to_blue.json --save-video videos\push_language_red_to_blue.gif --video-episodes 3
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --out runs\push_language_yellow_to_green.json --save-video videos\push_language_yellow_to_green.gif --video-episodes 3
 ```
 
 The saved GIFs show the command as an on-frame language caption, and the
@@ -136,7 +137,7 @@ Run the class-asset scene:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\check_mujoco_setup.py --config configs\class_panda.yaml
-.\.venv\Scripts\python.exe scripts\run_demo.py --config configs\class_panda.yaml --episodes 3 --save-video videos\class_panda_demo.gif
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda.yaml --policy push_fsm --episodes 5 --out runs\class_panda_push_eval_5.json --save-video videos\class_panda_push_eval_5.gif --video-episodes 5
 ```
 
 Collect demonstrations and train the smoke BC baseline:
@@ -148,7 +149,9 @@ Collect demonstrations and train the smoke BC baseline:
 
 Current measured status on the class scene:
 
-- FSM: `20/20` evaluation successes, average `88.15` steps.
+- Final `push_fsm`: `5/5` required video successes, average `82.00` steps.
+- Final `push_fsm`: `45/50` randomized evaluation successes, average `100.00` steps.
+- Legacy pick-and-place FSM: `300/300` successes, but it uses a manual attachment rule and is not the final assignment-compliance path.
 - NumPy linear BC smoke baseline: `0/20` evaluation successes.
 
-Use FSM as the final executor unless the BC policy is upgraded enough to pass the proposal's 60% threshold.
+Use `push_fsm` as the final executor for the report and submission video.

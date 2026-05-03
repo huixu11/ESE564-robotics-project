@@ -16,6 +16,15 @@ env:
   place_z: 0.07
   grasp_radius: 0.055
   basket_half_extent: 0.105
+  perception:
+    enabled: false
+  push:
+    push_z: 0.055
+    start_offset: 0.10
+    goal_overshoot: 0.05
+    push_steps: 90
+  physics_push:
+    enabled: false
   object_names:
     - cracker_box
     - mustard_bottle

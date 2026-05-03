@@ -25,7 +25,7 @@
 \maketitle
 
 \begin{abstract}
-This project implements a language-conditioned pick-and-place system for a Franka Panda-style robot arm in MuJoCo. The task is to place one of two YCB objects, a red cracker box or a yellow mustard bottle, into one of two colored baskets according to a natural-language command supplied at run time. The final system combines a lightweight language parser, a finite-state pick-and-place policy, a continuity-aware differential inverse kinematics controller, and a MuJoCo scene built from course Panda assets and public YCB meshes. The scripted model-based executor solved all 300 randomized evaluation episodes in the class Panda scene, with an average of 90.84 control steps per episode. A five-task video artifact is included in the submission and shows variability across object, basket, and speed instructions.
+This project implements a language-conditioned tabletop sorting system for a Franka Panda-style robot arm in MuJoCo. The task is to move one of two YCB objects, a red cracker box or a yellow mustard bottle, into one of two colored baskets according to a natural-language command supplied at run time. The final system combines a lightweight language parser, color-based camera perception, a finite-state pushing policy, a continuity-aware differential inverse kinematics controller, and a MuJoCo scene built from course Panda assets and public YCB meshes. The final perception-and-pushing executor solved all five required video tasks and achieved 45/50 successes on a larger randomized evaluation. The video artifacts include on-frame language captions to show the command being executed.
 \end{abstract}
 
 \section{Introduction}
@@ -34,7 +34,7 @@ Language-conditioned manipulation is useful because it separates the user's goal
 
 The original project proposal considered an end-effector waypoint pipeline followed by inverse kinematics and control. A concern with that approach is that independently solving inverse kinematics for consecutive end-effector targets can produce discontinuous joint-space motions, for example switching between elbow-up and elbow-down solutions for nearby Cartesian poses. To avoid that failure mode, the final implementation uses differential inverse kinematics seeded by the current joint state. Each step computes a small joint update from the local Jacobian, clips large joint jumps, and respects joint limits. This keeps consecutive actions compatible with each other while preserving a simple Cartesian policy interface.
 
-The final system is intentionally pragmatic. The policy used for final evaluation is a model-based finite-state machine (FSM), not a learned vision-language policy. I also implemented demonstration collection and a simple behavior cloning baseline to keep a learning path available, but the learned baseline was not strong enough to use as the final executor. The FSM provides a reliable final product for the assignment: it can be installed with a few Python dependencies, run from the command line, and repeatedly solve randomized versions of the manipulation task.
+The final system is intentionally pragmatic. The policy used for final evaluation is a model-based finite-state machine (FSM), not a learned vision-language policy. I also implemented demonstration collection and a simple behavior cloning baseline to keep a learning path available, but the learned baseline was not strong enough to use as the final executor. The final submitted path uses camera-derived object estimates and MuJoCo-integrated planar pushing, which better matches the assignment requirements than the earlier privileged-pose pick-and-place prototype.
 
 \section{Task and assets}
 
@@ -66,9 +66,10 @@ The robot decision-making pipeline has four main components:
 
 \begin{enumerate}
   \item A language parser extracts the target object, target basket, and speed modifier from the instruction.
-  \item A scripted FSM converts the parsed task into a sequence of end-effector goals: approach, descend, grasp, lift, move above the basket, lower, release, and retreat.
+  \item A color-based perception module estimates the red and yellow object positions from rendered RGB frames.
+  \item A scripted pushing FSM converts the parsed task and perceived object position into approach, lower, push, and retreat waypoints.
   \item A differential IK controller converts each Cartesian target into a continuous joint-space update.
-  \item The MuJoCo environment applies the arm and gripper commands, updates object attachment during grasps, and checks success.
+  \item The MuJoCo environment integrates object motion during the push phase and checks success after the commanded object enters the goal basket region.
 \end{enumerate}
 
 All policies use the same action interface:
@@ -84,26 +85,30 @@ The parser is rule-based because the command grammar is intentionally small. It 
 At run time, the user can provide the language instruction directly through the command-line interface. For example, the following command makes the robot repeatedly execute the requested red/cracker to blue/left task under randomized object starts:
 
 \begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy fsm --instruction "place the cracker box in the left basket" --episodes 3}
+\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the cracker box in the left basket" --episodes 3}
 \end{center}
 
 Changing only the instruction string changes the selected object and basket:
 
 \begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy fsm --instruction "place the mustard bottle in the right basket" --episodes 3}
+\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3}
 \end{center}
 
 To make this visible in the submitted artifacts, the video writer overlays the executed command on every saved GIF frame with a caption beginning with ``Language:''. The evaluation JSON also stores the same string in each episode's \texttt{instruction} field. This means the video itself shows which language command was entered, while the log file provides a machine-readable record of the same command.
 
-\subsection{Finite-state pick-and-place policy}
+\subsection{Perception-driven pushing policy}
 
-The FSM policy is implemented in \path{src/basket_sorting/fsm.py}. Given the current observation, it computes a target waypoint for the active phase. The phases are:
+The final FSM policy is implemented in \path{src/basket_sorting/push_fsm.py}. Given the parsed language command and the perceived position of the selected object, it computes a push line from behind the object toward the requested basket. The phases are:
 
 \begin{center}
-\texttt{approach} $\rightarrow$ \texttt{descend} $\rightarrow$ \texttt{grasp} $\rightarrow$ \texttt{lift} $\rightarrow$ \texttt{move\_to\_basket} $\rightarrow$ \texttt{lower} $\rightarrow$ \texttt{release} $\rightarrow$ \texttt{retreat}.
+\texttt{approach\_push\_start} $\rightarrow$ \texttt{lower\_to\_push} $\rightarrow$ \texttt{push} $\rightarrow$ \texttt{retreat}.
 \end{center}
 
-The FSM switches phases when the end-effector is close enough to the current waypoint or after the gripper command has been held for enough steps. Speed words modify the commanded motion step size; for example, ``careful'' moves more slowly than ``fast.'' The FSM is model-based and uses object positions from the MuJoCo state, so it is best understood as a reliable expert controller rather than a perception-based learned policy.
+The FSM switches phases when the end-effector is close enough to the current waypoint or after the push has been applied for a fixed number of control steps. Speed words modify the commanded motion step size; for example, ``careful'' moves more slowly than ``fast.'' The final policy uses perceived object positions for the variable part of the scene and fixed basket centers as known goal regions.
+
+\subsection{Color perception}
+
+The perception module is implemented in \path{src/basket_sorting/perception.py}. It segments rendered RGB images using color thresholds for the red cracker box and yellow mustard bottle, computes the pixel centroid of each mask, and converts the centroid to an approximate tabletop coordinate with a calibrated affine image-to-world map. The controller uses these perceived object positions instead of directly reading simulator object poses. Simulator poses are still used for randomized reset and final success scoring.
 
 \subsection{Differential inverse kinematics}
 
@@ -113,9 +118,9 @@ The controller avoids solving each IK target independently. At time $t$, it comp
 \]
 The update is then clipped by a maximum joint-step threshold and by joint limits. This makes the local IK solution continuous from the previous state and reduces the risk of sudden joint discontinuities. The same controller interface is used with a toy kinematic backend for the fallback environment and a MuJoCo Jacobian backend for the class Panda scene.
 
-\subsection{Grasp and object handling}
+\subsection{Physics-based object motion}
 
-The MuJoCo environment contains free joints for the two YCB objects. During evaluation, a grasp is detected when the gripper is closed near the target object at the configured grasp height. Once attached, the object pose is updated relative to the end-effector until the gripper opens over the basket. This creates a stable manipulation benchmark for testing language-conditioned decision making and IK continuity without requiring a full contact-rich grasp controller.
+The MuJoCo environment contains free joints for the two YCB objects. The earlier prototype used an attachment rule for pick-and-place, but the final evaluation path disables that behavior and uses a pushing proxy during the \texttt{push} phase. The proxy applies planar generalized forces and velocities to the target object's free joint while MuJoCo integrates the object's motion. This avoids directly teleporting object positions during the episode and provides a stable physics-based sorting benchmark for the final report.
 
 \subsection{Learning baseline}
 
@@ -125,68 +130,68 @@ The repository also includes scripts for collecting FSM demonstrations and fitti
 
 \subsection{Evaluation protocol}
 
-The main evaluation used \path{configs/class_panda.yaml}. Each episode samples a random target object, target basket, speed word, and initial object placement. Success is counted when the commanded target object is released inside the commanded basket. The final 300-episode evaluation was run with:
+The main evaluation used \path{configs/class_panda.yaml}. Each episode samples a random target object, target basket, speed word, and initial object placement. Success is counted when the commanded target object reaches the commanded basket region. The final larger evaluation was run with:
 
 \begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy fsm --episodes 300}
+\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 50}
 \end{center}
 
 The required five-task video was generated with:
 
 \begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy fsm --episodes 5 --save-video videos/class_panda_fsm_eval_5.gif --video-episodes 5}
+\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_push_eval_5.gif --video-episodes 5}
 \end{center}
 
 \subsection{Quantitative results}
 
-Table~\ref{tab:results} reports the final quantitative results. The 300-episode run includes all four object-basket combinations. The sampled commands were balanced enough to test both objects and both baskets: 158 mustard episodes, 142 cracker episodes, 139 right-basket episodes, and 161 left-basket episodes.
+Table~\ref{tab:results} reports the final quantitative results. The 50-episode run includes both objects, both baskets, randomized object starts, and speed modifiers.
 
 \begin{table}[h]
 \centering
-\caption{Final FSM evaluation results in the class Panda MuJoCo scene.}
+\caption{Final perception-driven pushing results in the class Panda MuJoCo scene.}
 \label{tab:results}
 \begin{tabular}{lrrrrr}
 \toprule
 Evaluation & Episodes & Successes & Success rate & Avg. steps & Step range \\
 \midrule
-Five-task video run & 5 & 5 & 100\% & 87.60 & 73--103 \\
-Explicit cracker-to-left command & 3 & 3 & 100\% & 84.00 & 83--85 \\
-Explicit mustard-to-right command & 3 & 3 & 100\% & 86.33 & 73--94 \\
-Main evaluation & 300 & 300 & 100\% & 90.84 & 73--113 \\
+Five-task video run & 5 & 5 & 100\% & 82.00 & 57--100 \\
+Explicit cracker-to-left command & 3 & 3 & 100\% & 94.00 & 84--100 \\
+Explicit mustard-to-right command & 3 & 3 & 100\% & 67.67 & 57--85 \\
+Randomized evaluation & 50 & 45 & 90\% & 100.00 & 45--240 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Qualitative results}
 
-Figure~\ref{fig:snapshots} shows snapshots from the generated five-task video. The sequence illustrates the robot observing two objects, closing the gripper on the target object, carrying it over a basket, and releasing it. The full video file is included at \path{videos/class_panda_fsm_eval_5.gif}.
+Figure~\ref{fig:snapshots} shows snapshots from the generated five-task pushing video. The sequence illustrates the robot observing two objects, moving through the pushing behavior, and the target object entering the requested basket region. The full video file is included at \path{videos/class_panda_push_eval_5.gif}.
 
-I also include two instruction-specific videos to make the language interface explicit: \path{videos/language_red_to_blue.gif} was generated from ``place the cracker box in the left basket,'' and \path{videos/language_yellow_to_green.gif} was generated from ``place the mustard bottle in the right basket.'' In both cases, the GIF frames contain the command as an on-screen language caption, the printed evaluation logs show the same instruction string for each episode, and the robot acts on that specified object-basket pair. Since most PDF viewers do not reliably play animated GIFs, the report includes still frames from these GIFs in Figure~\ref{fig:language_demos}, while the submission zip includes the full animated GIF files.
+I also include two instruction-specific videos to make the language interface explicit: \path{videos/push_language_red_to_blue.gif} was generated from ``place the cracker box in the left basket,'' and \path{videos/push_language_yellow_to_green.gif} was generated from ``place the mustard bottle in the right basket.'' In both cases, the GIF frames contain the command as an on-screen language caption, the printed evaluation logs show the same instruction string for each episode, and the robot acts on that specified object-basket pair. Since most PDF viewers do not reliably play animated GIFs, the report includes still frames from these GIFs in Figure~\ref{fig:language_demos}, while the submission zip includes the full animated GIF files.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.19\linewidth]{figures/task_snapshot_0000.png}
-\includegraphics[width=0.19\linewidth]{figures/task_snapshot_0060.png}
-\includegraphics[width=0.19\linewidth]{figures/task_snapshot_0120.png}
-\includegraphics[width=0.19\linewidth]{figures/task_snapshot_0220.png}
-\includegraphics[width=0.19\linewidth]{figures/task_snapshot_0437.png}
-\caption{Snapshots from the five-task MuJoCo video artifact. The camera view was chosen so that the red cracker box, yellow mustard bottle, blue left basket, green right basket, and Panda gripper are visible.}
+\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0000.png}
+\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0060.png}
+\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0120.png}
+\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0220.png}
+\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0414.png}
+\caption{Snapshots from the five-task MuJoCo pushing video artifact. The camera view shows the language command caption and the two colored YCB objects and basket regions.}
 \label{fig:snapshots}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.46\linewidth]{figures/language_red_to_blue_snapshot.png}
-\includegraphics[width=0.46\linewidth]{figures/language_yellow_to_green_snapshot.png}
+\includegraphics[width=0.46\linewidth]{figures/push_language_red_to_blue_snapshot.png}
+\includegraphics[width=0.46\linewidth]{figures/push_language_yellow_to_green_snapshot.png}
 \caption{Still frames from the two explicit language-command GIFs. The caption at the top of each frame is the command provided through the command-line interface, making the language input visible in the report PDF as well as in the video artifacts.}
 \label{fig:language_demos}
 \end{figure}
 
 \subsection{Discussion and limitations}
 
-The main result is that the model-based executor is reliable on the target task distribution. The use of differential IK made the Cartesian waypoint policy smooth enough for repeated randomized trials, and the language parser was sufficient for the command set used in this project.
+The main result is that the model-based perception-and-pushing executor solves the required five video tasks and succeeds on most randomized trials. The use of differential IK made the Cartesian waypoint policy smooth enough for repeated trials, and the language parser was sufficient for the command set used in this project.
 
-The main limitation is that the final policy uses privileged object poses from simulation. It does not yet estimate object poses from RGB images. The behavior cloning baseline also remains weak because the simple linear policy does not capture the phase-dependent structure of the task. A stronger learned version would use an image encoder, language embeddings, and a recurrent or transformer policy, while retaining the current differential IK controller as a low-level action interface. Another limitation is that grasping is represented with an attachment rule rather than full contact-rich manipulation. This keeps the benchmark stable but does not test all failure modes of a physical gripper.
+The main limitation is that perception is a simple calibrated color-segmentation system, so it depends on object colors and camera placement. The pushing dynamics also use a planar MuJoCo force/velocity proxy during the push phase rather than a fully tuned contact-rich gripper interaction. The behavior cloning baseline remains weak because the simple linear policy does not capture the phase-dependent structure of the task. A stronger learned version would use an image encoder, language embeddings, and a recurrent or transformer policy, while retaining the current differential IK controller as a low-level action interface.
 
 \section{Code and reproducibility}
 
@@ -197,9 +202,9 @@ The repository includes a README with installation and run instructions. The sho
 
 \path{.\.venv\Scripts\python.exe -m pip install -e ".[mujoco]"}
 
-\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy fsm --episodes 5 --save-video videos/class_panda_fsm_eval_5.gif --video-episodes 5}
+\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_push_eval_5.gif --video-episodes 5}
 
-\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/language_yellow_to_green.gif}
+\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/push_language_yellow_to_green.gif}
 \end{center}
 
 The most important files are:
@@ -208,7 +213,8 @@ The most important files are:
   \item \path{README.md}: installation and evaluation instructions.
   \item \path{configs/class_panda.yaml}: final class Panda scene configuration.
   \item \path{assets/class_panda/basket_scene.mjcf}: MuJoCo scene with Panda, YCB objects, baskets, and demo camera.
-  \item \path{src/basket_sorting/fsm.py}: scripted decision policy.
+  \item \path{src/basket_sorting/perception.py}: color-based object perception.
+  \item \path{src/basket_sorting/push_fsm.py}: final scripted pushing policy.
   \item \path{src/basket_sorting/envs/mujoco_env.py}: MuJoCo environment and differential IK integration.
   \item \path{scripts/evaluate.py}: evaluation entry point.
 \end{itemize}

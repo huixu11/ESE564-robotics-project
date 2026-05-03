@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from basket_sorting.controllers import DifferentialIKController
+from basket_sorting.perception import estimate_color_positions
 from basket_sorting.tasks import TaskSpec, make_instruction, parse_instruction
 
 
@@ -36,6 +37,7 @@ class _ResolvedNames:
     ee_site_id: int | None
     ee_body_id: int | None
     camera_id: int | None
+    perception_camera_id: int | None
 
 
 class MujocoPandaKinematics:
@@ -112,6 +114,8 @@ class MujocoBasketSortingEnv:
         self.gripper_open = True
         self.last_ik_success = True
         self.attached_object: str | None = None
+        self.last_perceived_objects: dict[str, np.ndarray] = {}
+        self.last_perceived_baskets: dict[str, np.ndarray] = {}
         self.phase = "reset"
 
     def reset(self, instruction: str | None = None, seed: int | None = None) -> dict[str, Any]:
@@ -135,6 +139,8 @@ class MujocoBasketSortingEnv:
         self.steps = 0
         self.gripper_open = True
         self.attached_object = None
+        self.last_perceived_objects = {}
+        self.last_perceived_baskets = {}
         self.last_ik_success = True
         self.phase = "reset"
         return self._observation()
@@ -152,13 +158,27 @@ class MujocoBasketSortingEnv:
         self._set_gripper(open_gripper=bool(action_arr[3] >= 0.0))
 
         if self.mj_cfg.get("direct_joint_position", False):
-            self._update_attachment()
-            self.mujoco.mj_forward(self.model, self.data)
+            if self._push_proxy_enabled() and self.phase == "push":
+                for _ in range(int(self.mj_cfg.get("control_substeps", 8))):
+                    self._apply_push_proxy(action_arr)
+                    self.mujoco.mj_step(self.model, self.data)
+                self.data.xfrc_applied[:] = 0.0
+                self.data.qfrc_applied[:] = 0.0
+            else:
+                self._update_attachment()
+                self.mujoco.mj_forward(self.model, self.data)
         else:
             for _ in range(int(self.mj_cfg.get("control_substeps", 8))):
-                self._update_attachment()
+                if self._push_proxy_enabled():
+                    self._apply_push_proxy(action_arr)
+                else:
+                    self._update_attachment()
                 self.mujoco.mj_step(self.model, self.data)
-            self._update_attachment()
+            if self._push_proxy_enabled():
+                self.data.xfrc_applied[:] = 0.0
+                self.data.qfrc_applied[:] = 0.0
+            else:
+                self._update_attachment()
 
         self.steps += 1
         success = self.is_success()
@@ -173,10 +193,12 @@ class MujocoBasketSortingEnv:
         return self._observation(), reward, done, info
 
     def render_rgb(self) -> np.ndarray:
+        return self._render_camera(self.names.camera_id)
+
+    def _render_camera(self, camera_id: int | None) -> np.ndarray:
         if self.renderer is not None:
             try:
-                camera = self.names.camera_id if self.names.camera_id is not None else None
-                self.renderer.update_scene(self.data, camera=camera)
+                self.renderer.update_scene(self.data, camera=camera_id)
                 return np.asarray(self.renderer.render(), dtype=np.uint8)
             except Exception:
                 pass
@@ -197,12 +219,18 @@ class MujocoBasketSortingEnv:
         released_or_low = obj_pos[2] <= max(0.08, float(self.env_cfg["place_z"]) + 0.03)
         return bool(inside_xy and released_or_low)
 
-    def get_state_features(self) -> np.ndarray:
+    def get_state_features(
+        self,
+        objects: dict[str, np.ndarray] | None = None,
+        baskets: dict[str, np.ndarray] | None = None,
+    ) -> np.ndarray:
         if self.task is None:
             raise RuntimeError("Call reset before requesting features.")
         ee = self._ee_pos()
-        target = self._object_pos(self.task.target_object)
-        basket = np.asarray(self.env_cfg["basket_poses"][self.task.target_basket], dtype=float)
+        objects = objects or {name: self._object_pos(name) for name in self.env_cfg["object_names"]}
+        baskets = baskets or {name: np.asarray(pose, dtype=float) for name, pose in self.env_cfg["basket_poses"].items()}
+        target = np.asarray(objects[self.task.target_object], dtype=float)
+        basket = np.asarray(baskets[self.task.target_basket], dtype=float)
         attached = 1.0 if self.attached_object == self.task.target_object else 0.0
         return np.concatenate(
             [
@@ -228,16 +256,22 @@ class MujocoBasketSortingEnv:
     def _observation(self) -> dict[str, Any]:
         if self.task is None:
             raise RuntimeError("Environment has not been reset.")
-        objects = {name: self._object_pos(name) for name in self.env_cfg["object_names"]}
+        sim_objects = {name: self._object_pos(name) for name in self.env_cfg["object_names"]}
+        sim_baskets = {name: np.asarray(pose, dtype=float) for name, pose in self.env_cfg["basket_poses"].items()}
+        rgb = self.render_rgb()
+        objects, baskets = self._policy_scene_estimate(rgb, sim_objects, sim_baskets)
         return {
-            "rgb": self.render_rgb(),
+            "rgb": rgb,
             "qpos": self._arm_qpos(),
             "ee_pos": self._ee_pos(),
             "gripper_open": self.gripper_open,
             "task": self.task,
             "objects": objects,
+            "baskets": baskets,
+            "sim_objects": sim_objects,
+            "sim_baskets": sim_baskets,
             "attached_object": self.attached_object,
-            "state_features": self.get_state_features(),
+            "state_features": self.get_state_features(objects, baskets),
             "phase": self.phase,
         }
 
@@ -301,6 +335,14 @@ class MujocoBasketSortingEnv:
         )
         if camera_id is not None and camera_id < 0:
             camera_id = None
+        perception_camera_name = self.env_cfg.get("perception", {}).get("camera_name", camera_name)
+        perception_camera_id = (
+            self._name_id(self.mujoco.mjtObj.mjOBJ_CAMERA, perception_camera_name, required=False)
+            if perception_camera_name
+            else camera_id
+        )
+        if perception_camera_id is not None and perception_camera_id < 0:
+            perception_camera_id = camera_id
         return _ResolvedNames(
             arm_joint_ids=arm_joint_ids,
             arm_qpos_addr=arm_qpos_addr,
@@ -315,6 +357,7 @@ class MujocoBasketSortingEnv:
             ee_site_id=ee_site_id if ee_site_id >= 0 else None,
             ee_body_id=ee_body_id if ee_body_id >= 0 else None,
             camera_id=camera_id,
+            perception_camera_id=perception_camera_id,
         )
 
     def _name_id(self, obj_type: Any, name: str, required: bool = True) -> int:
@@ -381,6 +424,45 @@ class MujocoBasketSortingEnv:
             self.data.qpos[self.names.gripper_qpos_addr] = ctrl_value
             self.mujoco.mj_forward(self.model, self.data)
 
+    def _push_proxy_enabled(self) -> bool:
+        return bool(self.env_cfg.get("physics_push", {}).get("enabled", False))
+
+    def _apply_push_proxy(self, action_arr: np.ndarray) -> None:
+        self.data.xfrc_applied[:] = 0.0
+        self.data.qfrc_applied[:] = 0.0
+        if self.task is None or not self._push_proxy_enabled() or self.phase != "push":
+            return
+        target_pos = self._object_pos(self.task.target_object)
+        basket = np.asarray(self.env_cfg["basket_poses"][self.task.target_basket], dtype=float)
+        direction = basket[:2] - target_pos[:2]
+        norm = float(np.linalg.norm(direction))
+        if norm < 1e-9:
+            return
+        direction = direction / norm
+
+        ee = self._ee_pos()
+        xy_dist = float(np.linalg.norm(target_pos[:2] - ee[:2]))
+        push_cfg = self.env_cfg.get("physics_push", {})
+        if xy_dist > float(push_cfg.get("radius", 0.13)):
+            return
+
+        force = float(push_cfg.get("force", 38.0))
+        joint_id = self.names.object_free_joint_ids.get(self.task.target_object)
+        if joint_id is not None:
+            dof_addr = int(self.model.jnt_dofadr[joint_id])
+            velocity = float(push_cfg.get("velocity", 0.0))
+            if velocity > 0.0:
+                self.data.qvel[dof_addr] = velocity * direction[0]
+                self.data.qvel[dof_addr + 1] = velocity * direction[1]
+                self.data.qvel[dof_addr + 2] = 0.0
+                self.data.qvel[dof_addr + 3 : dof_addr + 6] = 0.0
+            self.data.qfrc_applied[dof_addr] = force * direction[0]
+            self.data.qfrc_applied[dof_addr + 1] = force * direction[1]
+        else:
+            body_id = self.names.object_body_ids[self.task.target_object]
+            self.data.xfrc_applied[body_id, 0] = force * direction[0]
+            self.data.xfrc_applied[body_id, 1] = force * direction[1]
+
     def _update_attachment(self) -> None:
         if self.task is None:
             return
@@ -401,6 +483,42 @@ class MujocoBasketSortingEnv:
         if self.attached_object is not None:
             held_pos = np.array([ee[0], ee[1], max(0.04, ee[2] - 0.045)], dtype=float)
             self._set_object_pos(self.attached_object, held_pos)
+
+    def _policy_scene_estimate(
+        self,
+        rgb: np.ndarray,
+        sim_objects: dict[str, np.ndarray],
+        sim_baskets: dict[str, np.ndarray],
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+        perception_cfg = self.env_cfg.get("perception", {})
+        if not perception_cfg.get("enabled", False):
+            return sim_objects, sim_baskets
+
+        perception_rgb = rgb
+        if self.names.perception_camera_id != self.names.camera_id:
+            perception_rgb = self._render_camera(self.names.perception_camera_id)
+        estimates = estimate_color_positions(perception_rgb, perception_cfg)
+
+        objects: dict[str, np.ndarray] = {}
+        for name in self.env_cfg["object_names"]:
+            if name in estimates:
+                self.last_perceived_objects[name] = estimates[name]
+            if name in self.last_perceived_objects:
+                objects[name] = self.last_perceived_objects[name].copy()
+
+        baskets: dict[str, np.ndarray] = {}
+        for name, pose in sim_baskets.items():
+            if name in estimates:
+                self.last_perceived_baskets[name] = estimates[name]
+            # Basket locations are fixed goal regions in the scene map; object
+            # positions are the variable state estimated from camera color.
+            baskets[name] = np.asarray(pose, dtype=float).copy()
+
+        if len(objects) != len(self.env_cfg["object_names"]):
+            missing = set(self.env_cfg["object_names"]) - set(objects)
+            for name in missing:
+                objects[name] = sim_objects[name].copy()
+        return objects, baskets
 
     def _ee_pos(self) -> np.ndarray:
         self.mujoco.mj_forward(self.model, self.data)

@@ -11,13 +11,14 @@ from basket_sorting.env_factory import make_env
 from basket_sorting.evaluation import save_gif, save_json, summarize
 from basket_sorting.fsm import ScriptedPickPlaceFSM
 from basket_sorting.policies import LinearBCPolicy
+from basket_sorting.push_fsm import ScriptedPushFSM
 from basket_sorting.rollout import run_episode
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate FSM or BC policy.")
     parser.add_argument("--config", default=None)
-    parser.add_argument("--policy", choices=["fsm", "linear_bc"], default="fsm")
+    parser.add_argument("--policy", choices=["fsm", "push_fsm", "linear_bc"], default="fsm")
     parser.add_argument("--model", default="models/state_linear_bc.npz")
     parser.add_argument("--episodes", type=int, default=50)
     parser.add_argument("--seed", type=int, default=500)
@@ -39,7 +40,12 @@ def main() -> None:
     frame_captions = []
     for episode in range(args.episodes):
         env = make_env(config, seed=args.seed + episode)
-        policy = ScriptedPickPlaceFSM(config) if args.policy == "fsm" else LinearBCPolicy(args.model, config)
+        if args.policy == "fsm":
+            policy = ScriptedPickPlaceFSM(config)
+        elif args.policy == "push_fsm":
+            policy = ScriptedPushFSM(config)
+        else:
+            policy = LinearBCPolicy(args.model, config)
         try:
             result = run_episode(
                 env,

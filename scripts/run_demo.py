@@ -10,6 +10,7 @@ from basket_sorting.config import load_config
 from basket_sorting.env_factory import make_env
 from basket_sorting.evaluation import save_gif
 from basket_sorting.fsm import ScriptedPickPlaceFSM
+from basket_sorting.push_fsm import ScriptedPushFSM
 from basket_sorting.rollout import run_episode
 
 
@@ -19,6 +20,7 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, default=1)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--instruction", default=None)
+    parser.add_argument("--policy", choices=["fsm", "push_fsm"], default="fsm")
     parser.add_argument("--save-video", default=None)
     args = parser.parse_args()
 
@@ -28,7 +30,7 @@ def main() -> None:
     successes = 0
     for episode in range(args.episodes):
         env = make_env(config, seed=args.seed + episode)
-        policy = ScriptedPickPlaceFSM(config)
+        policy = ScriptedPushFSM(config) if args.policy == "push_fsm" else ScriptedPickPlaceFSM(config)
         try:
             result = run_episode(
                 env,
