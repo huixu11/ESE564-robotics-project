@@ -84,6 +84,32 @@ MJCF/meshes and official YCB Google 16k visual meshes for:
 - `003_cracker_box`
 - `006_mustard_bottle`
 
+### Object and Basket Color Convention
+
+In the class Panda scene, the visual colors are:
+
+- red object: YCB cracker box
+- yellow object: YCB mustard bottle
+- blue basket: left basket
+- green basket: right basket
+
+The task is still language-conditioned: the robot follows the instruction, not a
+hard-coded color rule. For the clearest final demo convention, use:
+
+- red/cracker box -> blue/left basket
+- yellow/mustard bottle -> green/right basket
+
+Example demo commands:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_demo.py --config configs\class_panda.yaml --instruction "place the cracker box in the left basket" --save-video videos\red_cracker_to_blue_basket.gif
+.\.venv\Scripts\python.exe scripts\run_demo.py --config configs\class_panda.yaml --instruction "place the mustard bottle in the right basket" --save-video videos\yellow_mustard_to_green_basket.gif
+```
+
+Random evaluation episodes can still choose any valid object/basket instruction,
+including red to green or yellow to blue, because that tests whether the policy
+uses the language command rather than memorizing a fixed color mapping.
+
 Run the class-asset scene:
 
 ```powershell
