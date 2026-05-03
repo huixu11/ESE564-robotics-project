@@ -161,7 +161,7 @@ Main evaluation & 300 & 300 & 100\% & 90.84 & 73--113 \\
 
 Figure~\ref{fig:snapshots} shows snapshots from the generated five-task video. The sequence illustrates the robot observing two objects, closing the gripper on the target object, carrying it over a basket, and releasing it. The full video file is included at \path{videos/class_panda_fsm_eval_5.gif}.
 
-I also include two instruction-specific videos to make the language interface explicit: \path{videos/language_red_to_blue.gif} was generated from ``place the cracker box in the left basket,'' and \path{videos/language_yellow_to_green.gif} was generated from ``place the mustard bottle in the right basket.'' In both cases, the GIF frames contain the command as an on-screen language caption, the printed evaluation logs show the same instruction string for each episode, and the robot acts on that specified object-basket pair.
+I also include two instruction-specific videos to make the language interface explicit: \path{videos/language_red_to_blue.gif} was generated from ``place the cracker box in the left basket,'' and \path{videos/language_yellow_to_green.gif} was generated from ``place the mustard bottle in the right basket.'' In both cases, the GIF frames contain the command as an on-screen language caption, the printed evaluation logs show the same instruction string for each episode, and the robot acts on that specified object-basket pair. Since most PDF viewers do not reliably play animated GIFs, the report includes still frames from these GIFs in Figure~\ref{fig:language_demos}, while the submission zip includes the full animated GIF files.
 
 \begin{figure}[h]
 \centering
@@ -172,6 +172,14 @@ I also include two instruction-specific videos to make the language interface ex
 \includegraphics[width=0.19\linewidth]{figures/task_snapshot_0437.png}
 \caption{Snapshots from the five-task MuJoCo video artifact. The camera view was chosen so that the red cracker box, yellow mustard bottle, blue left basket, green right basket, and Panda gripper are visible.}
 \label{fig:snapshots}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.46\linewidth]{figures/language_red_to_blue_snapshot.png}
+\includegraphics[width=0.46\linewidth]{figures/language_yellow_to_green_snapshot.png}
+\caption{Still frames from the two explicit language-command GIFs. The caption at the top of each frame is the command provided through the command-line interface, making the language input visible in the report PDF as well as in the video artifacts.}
+\label{fig:language_demos}
 \end{figure}
 
 \subsection{Discussion and limitations}
