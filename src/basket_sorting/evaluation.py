@@ -28,12 +28,23 @@ def save_json(path: str | Path, payload: dict[str, Any]) -> None:
         json.dump(payload, f, indent=2)
 
 
-def save_gif(path: str | Path, frames: list[np.ndarray], duration_ms: int = 60) -> None:
+def save_gif(
+    path: str | Path,
+    frames: list[np.ndarray],
+    duration_ms: int = 60,
+    max_frames: int | None = 3000,
+    frame_stride: int = 1,
+) -> int:
     if not frames:
-        return
+        return 0
     out = Path(path)
     ensure_dir(out.parent)
-    pil_frames = [Image.fromarray(frame) for frame in frames]
+    frame_stride = max(1, int(frame_stride))
+    sampled_frames = frames[::frame_stride]
+    if max_frames is not None and max_frames > 0 and len(sampled_frames) > max_frames:
+        indices = np.linspace(0, len(sampled_frames) - 1, max_frames, dtype=int)
+        sampled_frames = [sampled_frames[int(idx)] for idx in indices]
+    pil_frames = [Image.fromarray(frame) for frame in sampled_frames]
     pil_frames[0].save(
         out,
         save_all=True,
@@ -41,3 +52,4 @@ def save_gif(path: str | Path, frames: list[np.ndarray], duration_ms: int = 60) 
         duration=duration_ms,
         loop=0,
     )
+    return len(sampled_frames)

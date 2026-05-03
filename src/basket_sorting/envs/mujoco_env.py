@@ -28,6 +28,7 @@ class _ResolvedNames:
     arm_dof_addr: np.ndarray
     arm_actuator_ids: list[int]
     gripper_actuator_ids: list[int]
+    gripper_qpos_addr: np.ndarray
     object_body_ids: dict[str, int]
     object_free_joint_ids: dict[str, int]
     object_free_qpos_addr: dict[str, int]
@@ -181,6 +182,11 @@ class MujocoBasketSortingEnv:
                 pass
         return self._render_top_down_fallback()
 
+    def close(self) -> None:
+        if self.renderer is not None:
+            self.renderer.close()
+            self.renderer = None
+
     def is_success(self) -> bool:
         if self.task is None:
             return False
@@ -249,6 +255,12 @@ class MujocoBasketSortingEnv:
             for name in self.mj_cfg.get("gripper_actuator_names", [])
         ]
         gripper_actuator_ids = [idx for idx in gripper_actuator_ids if idx >= 0]
+        gripper_joint_ids = [
+            self._name_id(self.mujoco.mjtObj.mjOBJ_JOINT, name, required=False)
+            for name in self.mj_cfg.get("gripper_joint_names", [])
+        ]
+        gripper_joint_ids = [idx for idx in gripper_joint_ids if idx >= 0]
+        gripper_qpos_addr = np.asarray([self.model.jnt_qposadr[joint_id] for joint_id in gripper_joint_ids], dtype=int)
         object_body_ids = {
             name: self._name_id(self.mujoco.mjtObj.mjOBJ_BODY, body_name)
             for name, body_name in self.mj_cfg.get("object_body_names", {}).items()
@@ -295,6 +307,7 @@ class MujocoBasketSortingEnv:
             arm_dof_addr=arm_dof_addr,
             arm_actuator_ids=arm_actuator_ids,
             gripper_actuator_ids=gripper_actuator_ids,
+            gripper_qpos_addr=gripper_qpos_addr,
             object_body_ids=object_body_ids,
             object_free_joint_ids=object_free_joint_ids,
             object_free_qpos_addr=object_free_qpos_addr,
@@ -322,9 +335,10 @@ class MujocoBasketSortingEnv:
 
     def _randomize_scene(self) -> None:
         positions: dict[str, np.ndarray] = {}
+        min_distance = float(self.env_cfg.get("object_min_distance", 0.15))
         for name in self.env_cfg["object_names"]:
             pos = self._sample_object_pos()
-            while any(np.linalg.norm(pos[:2] - other[:2]) < 0.15 for other in positions.values()):
+            while any(np.linalg.norm(pos[:2] - other[:2]) < min_distance for other in positions.values()):
                 pos = self._sample_object_pos()
             positions[name] = pos
             self._set_object_pos(name, pos)
@@ -334,7 +348,7 @@ class MujocoBasketSortingEnv:
 
     def _sample_object_pos(self) -> np.ndarray:
         bounds = self.env_cfg["table_bounds"]
-        return np.array([self.rng.uniform(*bounds["x"]), self.rng.uniform(-0.22, 0.12), 0.04], dtype=float)
+        return np.array([self.rng.uniform(*bounds["x"]), self.rng.uniform(*bounds["y"]), 0.04], dtype=float)
 
     def _arm_qpos(self) -> np.ndarray:
         return np.asarray(self.data.qpos[self.names.arm_qpos_addr], dtype=float).copy()
@@ -363,6 +377,9 @@ class MujocoBasketSortingEnv:
         )
         for actuator_id in self.names.gripper_actuator_ids:
             self.data.ctrl[actuator_id] = ctrl_value
+        if self.mj_cfg.get("direct_joint_position", False) and len(self.names.gripper_qpos_addr):
+            self.data.qpos[self.names.gripper_qpos_addr] = ctrl_value
+            self.mujoco.mj_forward(self.model, self.data)
 
     def _update_attachment(self) -> None:
         if self.task is None:

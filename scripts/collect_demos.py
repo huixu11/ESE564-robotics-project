@@ -32,7 +32,10 @@ def main() -> None:
     for episode in range(args.episodes):
         env = make_env(config, seed=args.seed + episode)
         policy = ScriptedPickPlaceFSM(config)
-        result = run_episode(env, policy, seed=args.seed + episode, record=True)
+        try:
+            result = run_episode(env, policy, seed=args.seed + episode, record=True)
+        finally:
+            env.close()
         if result.success or not config["data"]["keep_success_only"]:
             writer.write_episode(saved, result.instruction, result.records, result.success)
             saved += 1

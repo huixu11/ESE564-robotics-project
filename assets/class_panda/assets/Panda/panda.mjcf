@@ -99,11 +99,6 @@
       </body>
       <site name="panda_link0_site" />
     </body>
-    <body name="block" pos="0.6 0.0 .03" quat="0.96592583 0.0 0.0 0.25881905">
-      <joint name="block_joint" type="free" damping="0.0005" />
-      <geom name="block_collision" type="box" size="0.03 0.03 0.03" class="collision" mass="0.01" />
-      <geom name="block_visual" material="default_material" rgba="1.0 0.0 0.0 1.0" type="box" size="0.03 0.03 0.03" class="visual" />  
-    </body>
   </worldbody>
 
 <actuator>

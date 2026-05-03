@@ -138,6 +138,9 @@ class KinematicBasketSortingEnv:
     def save_frame(self, path: str | Path) -> None:
         Image.fromarray(self.render_rgb()).save(path)
 
+    def close(self) -> None:
+        return None
+
     def is_success(self) -> bool:
         if self.task is None:
             return False

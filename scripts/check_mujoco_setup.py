@@ -17,11 +17,14 @@ def main() -> None:
 
     config = load_config(args.config)
     env = make_env(config)
-    obs = env.reset(seed=config.get("seed", 0))
-    print("mujoco_setup_ok=True")
-    print(f"instruction={obs['task'].instruction!r}")
-    print(f"ee_pos={obs['ee_pos']}")
-    print(f"objects={obs['objects']}")
+    try:
+        obs = env.reset(seed=config.get("seed", 0))
+        print("mujoco_setup_ok=True")
+        print(f"instruction={obs['task'].instruction!r}")
+        print(f"ee_pos={obs['ee_pos']}")
+        print(f"objects={obs['objects']}")
+    finally:
+        env.close()
 
 
 if __name__ == "__main__":

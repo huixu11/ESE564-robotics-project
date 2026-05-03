@@ -28,13 +28,16 @@ def main() -> None:
     for episode in range(args.episodes):
         env = make_env(config, seed=args.seed + episode)
         policy = ScriptedPickPlaceFSM(config)
-        result = run_episode(
-            env,
-            policy,
-            instruction=args.instruction,
-            seed=args.seed + episode,
-            frames=bool(args.save_video),
-        )
+        try:
+            result = run_episode(
+                env,
+                policy,
+                instruction=args.instruction,
+                seed=args.seed + episode,
+                frames=bool(args.save_video),
+            )
+        finally:
+            env.close()
         successes += int(result.success)
         all_frames.extend(result.frames)
         print(

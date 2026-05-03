@@ -23,6 +23,9 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=500)
     parser.add_argument("--out", default="runs/eval.json")
     parser.add_argument("--save-video", default=None)
+    parser.add_argument("--video-episodes", type=int, default=5)
+    parser.add_argument("--video-stride", type=int, default=1)
+    parser.add_argument("--max-video-frames", type=int, default=3000)
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -31,12 +34,15 @@ def main() -> None:
     for episode in range(args.episodes):
         env = make_env(config, seed=args.seed + episode)
         policy = ScriptedPickPlaceFSM(config) if args.policy == "fsm" else LinearBCPolicy(args.model, config)
-        result = run_episode(
-            env,
-            policy,
-            seed=args.seed + episode,
-            frames=bool(args.save_video) and episode < 5,
-        )
+        try:
+            result = run_episode(
+                env,
+                policy,
+                seed=args.seed + episode,
+                frames=bool(args.save_video) and episode < args.video_episodes,
+            )
+        finally:
+            env.close()
         results.append(
             {
                 "episode": episode,
@@ -51,7 +57,13 @@ def main() -> None:
     summary = summarize(results)
     save_json(args.out, summary)
     if args.save_video:
-        save_gif(args.save_video, frames)
+        saved_frames = save_gif(
+            args.save_video,
+            frames,
+            frame_stride=args.video_stride,
+            max_frames=args.max_video_frames,
+        )
+        print(f"saved_video={args.save_video} frames={saved_frames} raw_frames={len(frames)}")
     print(f"success_rate={summary['success_rate']:.3f} avg_steps={summary['avg_steps']:.2f} out={args.out}")
 
 

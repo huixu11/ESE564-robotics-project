@@ -7,9 +7,11 @@ hw/*.zip
 .mypy_cache/
 
 data/*/
+run/
 models/*.npz
 runs/*.json
 videos/*.gif
+videos/inspect_frames/
 assets/ycb/
 assets/class_panda/assets/Panda/*.obj
 assets/class_panda/assets/Panda/meshes/ycb/
