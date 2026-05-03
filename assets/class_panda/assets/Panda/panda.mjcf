@@ -38,7 +38,7 @@
     <light name="top" pos="0 0 30"/>
     <camera name="front_view" pos="0.0 -2.5 1.7" quat="0.8660254037844386 0.5 0.0 0.0" mode="fixed"/>
     <body name="table" pos="0.4 0 -0.5">
-      <geom name="table_collision" type="box" size="0.5 0.5 0.5" class="collision" mass="0.1" />
+      <geom name="table_collision" type="box" size="0.5 0.5 0.5" class="collision" mass="0.1" friction="0.25 0.005 0.0001" />
       <geom name="table_visual" material="default_material" type="box" size="0.5 0.5 0.5" class="visual" />
     </body>
     <body name="panda_link0" childclass="robot" pos="0.0 0.0 0.0">
@@ -76,16 +76,19 @@
                     <body name="panda_link8" pos="0 0 0.107">
                       <!-- <body name="panda_hand" quat="0.9238795325113726 0.0 0.0 -0.38268343236488267"> -->
                       <body name="panda_hand">
-                        <geom name="panda_hand_collision" type="mesh" mesh="hand.obj" class="collision" />
+                        <geom name="panda_hand_collision" type="mesh" mesh="hand.obj" class="collision" contype="0" conaffinity="0" />
                         <geom name="panda_hand_visual" material="panda_white" type="mesh" mesh="hand.obj" class="visual" />
+                        <site name="panda_push_pad_site" pos="0 0 0.145" size="0.006" rgba="0.1 0.1 0.1 1" />
+                        <geom name="panda_push_pad_collision" type="box" pos="0 0 0.145" size="0.040 0.050 0.022" class="collision" contype="0" conaffinity="0" mass="0.03" />
+                        <geom name="panda_push_pad_visual" type="box" pos="0 0 0.145" size="0.040 0.050 0.022" material="default_material" class="visual" />
                         <body name="panda_leftfinger" pos="0 0 0.0584">
                           <joint name="panda_finger_joint1" type="slide" range="0.0 0.04" axis="0 1 0" />
-                          <geom name="panda_leftfinger_collision" type="mesh" mesh="finger.obj" class="collision" />
+                          <geom name="panda_leftfinger_collision" type="mesh" mesh="finger.obj" class="collision" contype="0" conaffinity="0" />
                           <geom name="panda_leftfinger_visual" material="panda_white" type="mesh" mesh="finger.obj" class="visual" />
                         </body>
                         <body name="panda_rightfinger" pos="0 0 0.0584">
                           <joint name="panda_finger_joint2" type="slide" range="0.0 0.04" axis="0 -1 0" />
-                          <geom name="panda_rightfinger_collision" quat="-1.0341155355510722e-13 -0.0 0.0 1.0" type="mesh" mesh="finger.obj" class="collision" />
+                          <geom name="panda_rightfinger_collision" quat="-1.0341155355510722e-13 -0.0 0.0 1.0" type="mesh" mesh="finger.obj" class="collision" contype="0" conaffinity="0" />
                           <geom name="panda_rightfinger_visual" quat="-1.0341155355510722e-13 -0.0 0.0 1.0" material="panda_white" type="mesh" mesh="finger.obj" class="visual" />
                         </body>
                       </body>

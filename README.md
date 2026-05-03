@@ -11,7 +11,7 @@ This folder contains a runnable scaffold for the project proposal:
 - lightweight behavior cloning baseline,
 - evaluation and GIF generation.
 
-The default environment is a deterministic kinematic fallback for quick tests. The final class Panda path uses assets in `assets/class_panda/`, color perception from rendered RGB frames, and `push_fsm` contact-style pushing in MuJoCo.
+The default environment is a deterministic kinematic fallback for quick tests. The final class Panda path uses assets in `assets/class_panda/`, color perception from rendered RGB frames, and `push_fsm` pushing in MuJoCo.
 
 ## Quick Start
 
@@ -149,9 +149,13 @@ Collect demonstrations and train the smoke BC baseline:
 
 Current measured status on the class scene:
 
-- Final `push_fsm`: `5/5` required video successes, average `82.00` steps.
-- Final `push_fsm`: `45/50` randomized evaluation successes, average `100.00` steps.
+- Final `push_fsm`: `5/5` required video successes, average `41.60` steps.
+- Final `push_fsm`: `20/20` randomized smoke-evaluation successes, average `38.75` steps.
 - Legacy pick-and-place FSM: `300/300` successes, but it uses a manual attachment rule and is not the final assignment-compliance path.
 - NumPy linear BC smoke baseline: `0/20` evaluation successes.
 
-Use `push_fsm` as the final executor for the report and submission video.
+Use `push_fsm` as the final executor for the report and submission video. It
+uses camera color perception and MuJoCo-integrated object motion. The stable
+submission config still uses a planar force/velocity push proxy during the push
+phase; an experimental contact-pusher implementation is present in the scene and
+environment code but is not reliable enough to use as the default final path.

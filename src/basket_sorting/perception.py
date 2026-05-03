@@ -34,6 +34,7 @@ def estimate_color_positions(
         ),
         dtype=float,
     )
+    object_affines = cfg.get("object_affines", {})
     min_pixels = int(cfg.get("min_pixels", 20))
     masks_cfg = cfg.get("color_masks", DEFAULT_COLOR_MASKS)
 
@@ -63,6 +64,7 @@ def estimate_color_positions(
         if len(xs) < min_pixels:
             continue
         pixel = np.array([float(xs.mean()), float(ys.mean()), 1.0], dtype=float)
-        xy = affine @ pixel
+        name_affine = np.asarray(object_affines.get(name, affine), dtype=float)
+        xy = name_affine @ pixel
         estimates[name] = np.array([xy[0], xy[1], 0.04], dtype=float)
     return estimates

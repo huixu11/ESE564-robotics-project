@@ -21,6 +21,8 @@ class ScriptedPushFSM:
         self.push_cfg = self.env_cfg.get("push", {})
         self.phase = "approach_push_start"
         self.counter = 0
+        self.segment_index = 0
+        self.lateral_sign = 0.0
         self.target_estimate: np.ndarray | None = None
         self.push_start: np.ndarray | None = None
         self.push_goal: np.ndarray | None = None
@@ -28,6 +30,8 @@ class ScriptedPushFSM:
     def reset(self) -> None:
         self.phase = "approach_push_start"
         self.counter = 0
+        self.segment_index = 0
+        self.lateral_sign = 0.0
         self.target_estimate = None
         self.push_start = None
         self.push_goal = None
@@ -67,7 +71,10 @@ class ScriptedPushFSM:
             goal = np.array([self.push_goal[0], self.push_goal[1], push_z], dtype=float)
             self.counter += 1
             if self.counter >= int(self.push_cfg.get("push_steps", 90)):
-                self._advance("retreat")
+                if self._advance_segment():
+                    self._advance("approach_push_start")
+                else:
+                    self._advance("retreat")
         elif self.phase == "retreat":
             goal = np.array([ee[0], ee[1], safe_z], dtype=float)
             self.counter += 1
@@ -82,16 +89,54 @@ class ScriptedPushFSM:
     def _set_push_line(self, target: np.ndarray, basket: np.ndarray) -> None:
         target_xy = np.asarray(target[:2], dtype=float)
         basket_xy = np.asarray(basket[:2], dtype=float)
-        direction = basket_xy - target_xy
-        norm = float(np.linalg.norm(direction))
-        if norm < 1e-9:
-            direction = np.array([0.0, 1.0], dtype=float)
+        if self.push_cfg.get("two_stage", True):
+            direction, anchor_xy, goal_xy = self._axis_aligned_segment(target_xy, basket_xy)
         else:
-            direction = direction / norm
+            direction = basket_xy - target_xy
+            norm = float(np.linalg.norm(direction))
+            if norm < 1e-9:
+                direction = np.array([0.0, 1.0], dtype=float)
+            else:
+                direction = direction / norm
+            anchor_xy = target_xy
+            goal_xy = basket_xy + direction * float(self.push_cfg.get("goal_overshoot", 0.05))
         start_offset = float(self.push_cfg.get("start_offset", 0.10))
+        self.push_start = self._clip_xy(anchor_xy - direction * start_offset)
+        self.push_goal = self._clip_xy(goal_xy)
+
+    def _axis_aligned_segment(
+        self,
+        target_xy: np.ndarray,
+        basket_xy: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         overshoot = float(self.push_cfg.get("goal_overshoot", 0.05))
-        self.push_start = self._clip_xy(target_xy - direction * start_offset)
-        self.push_goal = self._clip_xy(basket_xy + direction * overshoot)
+        x_tolerance = float(self.push_cfg.get("x_alignment_tolerance", 0.04))
+        if self.segment_index == 0 and abs(float(basket_xy[0] - target_xy[0])) > x_tolerance:
+            sign = 1.0 if basket_xy[0] >= target_xy[0] else -1.0
+            self.lateral_sign = sign
+            direction = np.array([sign, 0.0], dtype=float)
+            goal = np.array([basket_xy[0] + sign * overshoot, target_xy[1]], dtype=float)
+            return direction, target_xy, goal
+
+        self.segment_index = 1
+        sign = 1.0 if basket_xy[1] >= target_xy[1] else -1.0
+        direction = np.array([0.0, sign], dtype=float)
+        half_extent = float(self.env_cfg.get("basket_half_extent", 0.105))
+        if self.lateral_sign != 0.0:
+            aligned_x = basket_xy[0] - self.lateral_sign * half_extent * 0.8
+        else:
+            aligned_x = target_xy[0]
+        anchor = np.array([aligned_x, target_xy[1]], dtype=float)
+        goal = np.array([aligned_x, basket_xy[1] + sign * overshoot], dtype=float)
+        return direction, anchor, goal
+
+    def _advance_segment(self) -> bool:
+        if not self.push_cfg.get("two_stage", True) or self.segment_index >= 1:
+            return False
+        self.segment_index = 1
+        self.push_start = None
+        self.push_goal = None
+        return True
 
     def _clip_xy(self, xy: np.ndarray) -> np.ndarray:
         bounds = self.env_cfg["workspace_bounds"]

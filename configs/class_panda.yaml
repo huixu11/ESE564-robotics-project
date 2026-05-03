@@ -29,6 +29,7 @@ env:
     start_offset: 0.10
     goal_overshoot: 0.05
     push_steps: 230
+    two_stage: false
   physics_push:
     enabled: true
     radius: 10.0

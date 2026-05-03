@@ -38,6 +38,10 @@ class _ResolvedNames:
     ee_body_id: int | None
     camera_id: int | None
     perception_camera_id: int | None
+    contact_pusher_body_id: int | None
+    contact_pusher_mocap_id: int | None
+    base_qpos_addr: int | None
+    base_dof_addr: int | None
 
 
 class MujocoPandaKinematics:
@@ -116,6 +120,8 @@ class MujocoBasketSortingEnv:
         self.attached_object: str | None = None
         self.last_perceived_objects: dict[str, np.ndarray] = {}
         self.last_perceived_baskets: dict[str, np.ndarray] = {}
+        self.last_contact_pusher_pos: np.ndarray | None = None
+        self.base_qpos0: np.ndarray | None = None
         self.phase = "reset"
 
     def reset(self, instruction: str | None = None, seed: int | None = None) -> dict[str, Any]:
@@ -141,8 +147,11 @@ class MujocoBasketSortingEnv:
         self.attached_object = None
         self.last_perceived_objects = {}
         self.last_perceived_baskets = {}
+        self.last_contact_pusher_pos = None
+        self.base_qpos0 = self._base_qpos().copy()
         self.last_ik_success = True
         self.phase = "reset"
+        self._sync_contact_pusher(initial=True)
         return self._observation()
 
     def step(self, action: np.ndarray | list[float]) -> tuple[dict[str, Any], float, bool, dict[str, Any]]:
@@ -164,6 +173,17 @@ class MujocoBasketSortingEnv:
                     self.mujoco.mj_step(self.model, self.data)
                 self.data.xfrc_applied[:] = 0.0
                 self.data.qfrc_applied[:] = 0.0
+            elif self._contact_pusher_enabled():
+                start_pos = self._contact_pusher_pos()
+                target_pos = self._ee_pos()
+                for _ in range(int(self.mj_cfg.get("control_substeps", 8))):
+                    alpha = float(_ + 1) / float(int(self.mj_cfg.get("control_substeps", 8)))
+                    self._lock_direct_robot_state(target_qpos)
+                    self._set_contact_pusher_pos(start_pos * (1.0 - alpha) + target_pos * alpha)
+                    self.mujoco.mj_step(self.model, self.data)
+                    self._lock_direct_robot_state(target_qpos)
+                self.last_contact_pusher_pos = target_pos.copy()
+                self.mujoco.mj_forward(self.model, self.data)
             else:
                 self._update_attachment()
                 self.mujoco.mj_forward(self.model, self.data)
@@ -343,6 +363,20 @@ class MujocoBasketSortingEnv:
         )
         if perception_camera_id is not None and perception_camera_id < 0:
             perception_camera_id = camera_id
+        contact_pusher_name = self.mj_cfg.get("contact_pusher_body")
+        contact_pusher_body_id = (
+            self._name_id(self.mujoco.mjtObj.mjOBJ_BODY, contact_pusher_name, required=False)
+            if contact_pusher_name
+            else -1
+        )
+        contact_pusher_mocap_id = None
+        if contact_pusher_body_id >= 0:
+            mocap_id = int(self.model.body_mocapid[contact_pusher_body_id])
+            contact_pusher_mocap_id = mocap_id if mocap_id >= 0 else None
+        base_joint_name = self.mj_cfg.get("base_joint_name", "floating_base")
+        base_joint_id = self._name_id(self.mujoco.mjtObj.mjOBJ_JOINT, base_joint_name, required=False)
+        base_qpos_addr = int(self.model.jnt_qposadr[base_joint_id]) if base_joint_id >= 0 else None
+        base_dof_addr = int(self.model.jnt_dofadr[base_joint_id]) if base_joint_id >= 0 else None
         return _ResolvedNames(
             arm_joint_ids=arm_joint_ids,
             arm_qpos_addr=arm_qpos_addr,
@@ -358,6 +392,10 @@ class MujocoBasketSortingEnv:
             ee_body_id=ee_body_id if ee_body_id >= 0 else None,
             camera_id=camera_id,
             perception_camera_id=perception_camera_id,
+            contact_pusher_body_id=contact_pusher_body_id if contact_pusher_body_id >= 0 else None,
+            contact_pusher_mocap_id=contact_pusher_mocap_id,
+            base_qpos_addr=base_qpos_addr,
+            base_dof_addr=base_dof_addr,
         )
 
     def _name_id(self, obj_type: Any, name: str, required: bool = True) -> int:
@@ -380,27 +418,49 @@ class MujocoBasketSortingEnv:
         positions: dict[str, np.ndarray] = {}
         min_distance = float(self.env_cfg.get("object_min_distance", 0.15))
         for name in self.env_cfg["object_names"]:
-            pos = self._sample_object_pos()
+            pos = self._sample_object_pos(name)
             while any(np.linalg.norm(pos[:2] - other[:2]) < min_distance for other in positions.values()):
-                pos = self._sample_object_pos()
+                pos = self._sample_object_pos(name)
             positions[name] = pos
             self._set_object_pos(name, pos)
 
         for name, pose in self.env_cfg["basket_poses"].items():
             self._set_basket_pos(name, np.asarray(pose, dtype=float))
 
-    def _sample_object_pos(self) -> np.ndarray:
+    def _sample_object_pos(self, name: str) -> np.ndarray:
         bounds = self.env_cfg["table_bounds"]
-        return np.array([self.rng.uniform(*bounds["x"]), self.rng.uniform(*bounds["y"]), 0.04], dtype=float)
+        spawn_z = float(self.env_cfg.get("object_spawn_z", {}).get(name, 0.04))
+        return np.array([self.rng.uniform(*bounds["x"]), self.rng.uniform(*bounds["y"]), spawn_z], dtype=float)
 
     def _arm_qpos(self) -> np.ndarray:
         return np.asarray(self.data.qpos[self.names.arm_qpos_addr], dtype=float).copy()
+
+    def _base_qpos(self) -> np.ndarray:
+        if self.names.base_qpos_addr is None:
+            return np.empty(0, dtype=float)
+        addr = self.names.base_qpos_addr
+        return np.asarray(self.data.qpos[addr : addr + 7], dtype=float).copy()
 
     def _set_arm_qpos(self, qpos: np.ndarray) -> None:
         qpos = np.asarray(qpos, dtype=float)
         if qpos.shape != self.names.arm_qpos_addr.shape:
             raise ValueError(f"Arm qpos must have shape {self.names.arm_qpos_addr.shape}, got {qpos.shape}")
         self.data.qpos[self.names.arm_qpos_addr] = qpos
+
+    def _lock_direct_robot_state(self, arm_qpos: np.ndarray) -> None:
+        self._set_arm_qpos(arm_qpos)
+        self.data.qvel[self.names.arm_dof_addr] = 0.0
+        if self.names.base_qpos_addr is not None and self.base_qpos0 is not None:
+            qaddr = self.names.base_qpos_addr
+            daddr = self.names.base_dof_addr
+            self.data.qpos[qaddr : qaddr + 7] = self.base_qpos0
+            if daddr is not None:
+                self.data.qvel[daddr : daddr + 6] = 0.0
+        if len(self.names.gripper_qpos_addr):
+            ctrl_value = float(self.mj_cfg.get("open_gripper_ctrl", 0.04))
+            if not self.gripper_open:
+                ctrl_value = float(self.mj_cfg.get("closed_gripper_ctrl", 0.0))
+            self.data.qpos[self.names.gripper_qpos_addr] = ctrl_value
 
     def _apply_arm_target(self, qpos: np.ndarray) -> None:
         if self.mj_cfg.get("direct_joint_position", False) or not self.names.arm_actuator_ids:
@@ -426,6 +486,30 @@ class MujocoBasketSortingEnv:
 
     def _push_proxy_enabled(self) -> bool:
         return bool(self.env_cfg.get("physics_push", {}).get("enabled", False))
+
+    def _contact_pusher_enabled(self) -> bool:
+        return self.names.contact_pusher_mocap_id is not None
+
+    def _contact_pusher_pos(self) -> np.ndarray:
+        if self.names.contact_pusher_mocap_id is None:
+            return self._ee_pos()
+        if self.last_contact_pusher_pos is not None:
+            return self.last_contact_pusher_pos.copy()
+        return np.asarray(self.data.mocap_pos[self.names.contact_pusher_mocap_id], dtype=float).copy()
+
+    def _set_contact_pusher_pos(self, pos: np.ndarray) -> None:
+        if self.names.contact_pusher_mocap_id is None:
+            return
+        self.data.mocap_pos[self.names.contact_pusher_mocap_id] = np.asarray(pos, dtype=float)
+        self.data.mocap_quat[self.names.contact_pusher_mocap_id] = np.array([1.0, 0.0, 0.0, 0.0], dtype=float)
+
+    def _sync_contact_pusher(self, initial: bool = False) -> None:
+        if self.names.contact_pusher_mocap_id is None:
+            return
+        target_pos = self._ee_pos()
+        self._set_contact_pusher_pos(target_pos)
+        if initial:
+            self.last_contact_pusher_pos = target_pos.copy()
 
     def _apply_push_proxy(self, action_arr: np.ndarray) -> None:
         self.data.xfrc_applied[:] = 0.0

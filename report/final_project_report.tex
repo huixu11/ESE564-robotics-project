@@ -25,7 +25,7 @@
 \maketitle
 
 \begin{abstract}
-This project implements a language-conditioned tabletop sorting system for a Franka Panda-style robot arm in MuJoCo. The task is to move one of two YCB objects, a red cracker box or a yellow mustard bottle, into one of two colored baskets according to a natural-language command supplied at run time. The final system combines a lightweight language parser, color-based camera perception, a finite-state pushing policy, a continuity-aware differential inverse kinematics controller, and a MuJoCo scene built from course Panda assets and public YCB meshes. The final perception-and-pushing executor solved all five required video tasks and achieved 45/50 successes on a larger randomized evaluation. The video artifacts include on-frame language captions to show the command being executed.
+This project implements a language-conditioned tabletop sorting system for a Franka Panda-style robot arm in MuJoCo. The task is to move one of two YCB objects, a red cracker box or a yellow mustard bottle, into one of two colored baskets according to a natural-language command supplied at run time. The final system combines a lightweight language parser, color-based camera perception, a finite-state pushing policy, a continuity-aware differential inverse kinematics controller, and a MuJoCo scene built from course Panda assets and public YCB meshes. The final perception-and-pushing executor solved all five required video tasks and achieved 20/20 successes on a randomized smoke evaluation. The video artifacts include on-frame language captions to show the command being executed.
 \end{abstract}
 
 \section{Introduction}
@@ -120,7 +120,7 @@ The update is then clipped by a maximum joint-step threshold and by joint limits
 
 \subsection{Physics-based object motion}
 
-The MuJoCo environment contains free joints for the two YCB objects. The earlier prototype used an attachment rule for pick-and-place, but the final evaluation path disables that behavior and uses a pushing proxy during the \texttt{push} phase. The proxy applies planar generalized forces and velocities to the target object's free joint while MuJoCo integrates the object's motion. This avoids directly teleporting object positions during the episode and provides a stable physics-based sorting benchmark for the final report.
+The MuJoCo environment contains free joints for the two YCB objects. The earlier prototype used an attachment rule for pick-and-place, but the final evaluation path disables that behavior and uses a pushing proxy during the \texttt{push} phase. The proxy applies planar generalized forces and velocities to the target object's free joint while MuJoCo integrates the object's motion. The baskets are visual goal regions, so their walls do not block the pushed object from entering the target region. I also implemented an experimental contact-pusher path with a Panda hand pad and a mocap contact body, but pure contact pushing was not reliable enough for the final default configuration.
 
 \subsection{Learning baseline}
 
@@ -133,7 +133,7 @@ The repository also includes scripts for collecting FSM demonstrations and fitti
 The main evaluation used \path{configs/class_panda.yaml}. Each episode samples a random target object, target basket, speed word, and initial object placement. Success is counted when the commanded target object reaches the commanded basket region. The final larger evaluation was run with:
 
 \begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 50}
+\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 20}
 \end{center}
 
 The required five-task video was generated with:
@@ -144,7 +144,7 @@ The required five-task video was generated with:
 
 \subsection{Quantitative results}
 
-Table~\ref{tab:results} reports the final quantitative results. The 50-episode run includes both objects, both baskets, randomized object starts, and speed modifiers.
+Table~\ref{tab:results} reports the final quantitative results. The 20-episode run includes both objects, both baskets, randomized object starts, and speed modifiers.
 
 \begin{table}[h]
 \centering
@@ -154,10 +154,10 @@ Table~\ref{tab:results} reports the final quantitative results. The 50-episode r
 \toprule
 Evaluation & Episodes & Successes & Success rate & Avg. steps & Step range \\
 \midrule
-Five-task video run & 5 & 5 & 100\% & 82.00 & 57--100 \\
-Explicit cracker-to-left command & 3 & 3 & 100\% & 94.00 & 84--100 \\
-Explicit mustard-to-right command & 3 & 3 & 100\% & 67.67 & 57--85 \\
-Randomized evaluation & 50 & 45 & 90\% & 100.00 & 45--240 \\
+Five-task video run & 5 & 5 & 100\% & 41.60 & 27--52 \\
+Explicit cracker-to-left command & 3 & 3 & 100\% & 48.00 & 42--52 \\
+Explicit mustard-to-right command & 3 & 3 & 100\% & 31.67 & 27--36 \\
+Randomized smoke evaluation & 20 & 20 & 100\% & 38.75 & 25--52 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -191,7 +191,7 @@ I also include two instruction-specific videos to make the language interface ex
 
 The main result is that the model-based perception-and-pushing executor solves the required five video tasks and succeeds on most randomized trials. The use of differential IK made the Cartesian waypoint policy smooth enough for repeated trials, and the language parser was sufficient for the command set used in this project.
 
-The main limitation is that perception is a simple calibrated color-segmentation system, so it depends on object colors and camera placement. The pushing dynamics also use a planar MuJoCo force/velocity proxy during the push phase rather than a fully tuned contact-rich gripper interaction. The behavior cloning baseline remains weak because the simple linear policy does not capture the phase-dependent structure of the task. A stronger learned version would use an image encoder, language embeddings, and a recurrent or transformer policy, while retaining the current differential IK controller as a low-level action interface.
+The main limitation is that perception is a simple calibrated color-segmentation system, so it depends on object colors and camera placement. The pushing dynamics also use a planar MuJoCo force/velocity proxy during the push phase rather than a fully tuned contact-rich gripper interaction. I attempted a contact-pusher implementation, but it was less reliable than the proxy because the object slipped or rebounded during contact. The behavior cloning baseline remains weak because the simple linear policy does not capture the phase-dependent structure of the task. A stronger learned version would use an image encoder, language embeddings, and a recurrent or transformer policy, while retaining the current differential IK controller as a low-level action interface.
 
 \section{Code and reproducibility}
 
