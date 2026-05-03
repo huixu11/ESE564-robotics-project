@@ -24,6 +24,7 @@ def main() -> None:
 
     config = load_config(args.config)
     all_frames = []
+    frame_captions = []
     successes = 0
     for episode in range(args.episodes):
         env = make_env(config, seed=args.seed + episode)
@@ -40,13 +41,14 @@ def main() -> None:
             env.close()
         successes += int(result.success)
         all_frames.extend(result.frames)
+        frame_captions.extend([result.instruction] * len(result.frames))
         print(
             f"episode={episode} success={result.success} steps={result.steps} "
             f"instruction={result.instruction!r}"
         )
 
     if args.save_video:
-        save_gif(args.save_video, all_frames)
+        save_gif(args.save_video, all_frames, captions=frame_captions)
         print(f"saved_video={args.save_video}")
     print(f"success_rate={successes / max(1, args.episodes):.3f}")
 

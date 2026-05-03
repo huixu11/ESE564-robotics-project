@@ -21,6 +21,11 @@ def main() -> None:
     parser.add_argument("--model", default="models/state_linear_bc.npz")
     parser.add_argument("--episodes", type=int, default=50)
     parser.add_argument("--seed", type=int, default=500)
+    parser.add_argument(
+        "--instruction",
+        default=None,
+        help="Optional language command to execute in every episode, e.g. 'place the mustard bottle in the right basket'.",
+    )
     parser.add_argument("--out", default="runs/eval.json")
     parser.add_argument("--save-video", default=None)
     parser.add_argument("--video-episodes", type=int, default=5)
@@ -31,6 +36,7 @@ def main() -> None:
     config = load_config(args.config)
     results = []
     frames = []
+    frame_captions = []
     for episode in range(args.episodes):
         env = make_env(config, seed=args.seed + episode)
         policy = ScriptedPickPlaceFSM(config) if args.policy == "fsm" else LinearBCPolicy(args.model, config)
@@ -38,6 +44,7 @@ def main() -> None:
             result = run_episode(
                 env,
                 policy,
+                instruction=args.instruction,
                 seed=args.seed + episode,
                 frames=bool(args.save_video) and episode < args.video_episodes,
             )
@@ -52,7 +59,11 @@ def main() -> None:
             }
         )
         frames.extend(result.frames)
-        print(f"episode={episode} success={result.success} steps={result.steps}")
+        frame_captions.extend([result.instruction] * len(result.frames))
+        print(
+            f"episode={episode} success={result.success} steps={result.steps} "
+            f"instruction={result.instruction!r}"
+        )
 
     summary = summarize(results)
     save_json(args.out, summary)
@@ -62,6 +73,7 @@ def main() -> None:
             frames,
             frame_stride=args.video_stride,
             max_frames=args.max_video_frames,
+            captions=frame_captions,
         )
         print(f"saved_video={args.save_video} frames={saved_frames} raw_frames={len(frames)}")
     print(f"success_rate={summary['success_rate']:.3f} avg_steps={summary['avg_steps']:.2f} out={args.out}")

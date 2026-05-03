@@ -40,6 +40,17 @@ Evaluate FSM:
 python scripts/evaluate.py --policy fsm --episodes 25 --out runs/fsm_eval.json
 ```
 
+Run an explicit language command:
+
+```powershell
+python scripts/evaluate.py --policy fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/language_command_demo.gif
+```
+
+Saved GIFs include a top caption such as `Language: place the mustard bottle in
+the right basket`, and the JSON output records the same instruction for each
+episode. This makes it clear which language command the robot is following in
+the video.
+
 Evaluate the trained BC policy:
 
 ```powershell
@@ -105,6 +116,17 @@ Example demo commands:
 .\.venv\Scripts\python.exe scripts\run_demo.py --config configs\class_panda.yaml --instruction "place the cracker box in the left basket" --save-video videos\red_cracker_to_blue_basket.gif
 .\.venv\Scripts\python.exe scripts\run_demo.py --config configs\class_panda.yaml --instruction "place the mustard bottle in the right basket" --save-video videos\yellow_mustard_to_green_basket.gif
 ```
+
+The same language command can also be passed to the main evaluation script:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda.yaml --policy fsm --instruction "place the cracker box in the left basket" --episodes 3 --out runs\language_red_to_blue.json --save-video videos\language_red_to_blue.gif --video-episodes 3
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda.yaml --policy fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --out runs\language_yellow_to_green.json --save-video videos\language_yellow_to_green.gif --video-episodes 3
+```
+
+The saved GIFs show the command as an on-frame language caption, and the
+corresponding JSON files store the instruction strings under each episode's
+`instruction` field.
 
 Random evaluation episodes can still choose any valid object/basket instruction,
 including red to green or yellow to blue, because that tests whether the policy
