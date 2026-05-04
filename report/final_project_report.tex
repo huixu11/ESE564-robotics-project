@@ -11,6 +11,17 @@
 \usepackage{amsmath}
 \usepackage{microtype}
 \usepackage{xcolor}
+\usepackage{listings}
+
+\lstdefinestyle{cmd}{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  framerule=0.2pt,
+  xleftmargin=0.02\linewidth,
+  xrightmargin=0.02\linewidth
+}
 
 \title{Language-Conditioned Basket Sorting with a Panda Arm in MuJoCo}
 
@@ -84,15 +95,15 @@ The parser is rule-based because the command grammar is intentionally small. It 
 
 At run time, the user can provide the language instruction directly through the command-line interface. For example, the following command makes the robot repeatedly execute the requested red/cracker to blue/left task under randomized object starts:
 
-\begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the cracker box in the left basket" --episodes 3}
-\end{center}
+\begin{lstlisting}[style=cmd]
+python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the cracker box in the left basket" --episodes 3
+\end{lstlisting}
 
 Changing only the instruction string changes the selected object and basket:
 
-\begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3}
-\end{center}
+\begin{lstlisting}[style=cmd]
+python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3
+\end{lstlisting}
 
 To make this visible in the submitted artifacts, the video writer overlays the executed command on every saved GIF frame with a caption beginning with ``Language:''. The evaluation JSON also stores the same string in each episode's \texttt{instruction} field. This means the video itself shows which language command was entered, while the log file provides a machine-readable record of the same command.
 
@@ -134,15 +145,15 @@ The repository also includes scripts for collecting FSM demonstrations and fitti
 
 The main evaluation used \path{configs/class_panda.yaml}. Each episode samples a random target object, target basket, speed word, and initial object placement. Success is counted when the commanded target object reaches the commanded basket region. The final larger evaluation was run with:
 
-\begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 20}
-\end{center}
+\begin{lstlisting}[style=cmd]
+python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 20
+\end{lstlisting}
 
 The contact-rich five-task video was generated with:
 
-\begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda_contact.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_contact_eval_5.gif --video-episodes 5}
-\end{center}
+\begin{lstlisting}[style=cmd]
+python scripts/evaluate.py --config configs/class_panda_contact.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_contact_eval_5.gif --video-episodes 5
+\end{lstlisting}
 
 \subsection{Quantitative results}
 
@@ -206,15 +217,12 @@ The main limitation is that perception is a simple calibrated color-segmentation
 
 The repository includes a README with installation and run instructions. The shortest setup path is:
 
-\begin{center}
-\path{python -m venv .venv}
-
-\path{.\.venv\Scripts\python.exe -m pip install -e ".[mujoco]"}
-
-\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda_contact.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_contact_eval_5.gif --video-episodes 5}
-
-\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/push_language_yellow_to_green.gif}
-\end{center}
+\begin{lstlisting}[style=cmd]
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[mujoco]"
+.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda_contact.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_contact_eval_5.gif --video-episodes 5
+.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/push_language_yellow_to_green.gif
+\end{lstlisting}
 
 The most important files are:
 
