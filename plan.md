@@ -203,18 +203,19 @@ as `configs/class_panda_contact.yaml`.
    - yellow/mustard bottle to green/right basket.
 6. README and report now describe `push_fsm` as the final path.
 7. Remaining manual step: compile `report/final_project_report.tex` to PDF with Overleaf, MiKTeX, or TeX Live.
+8. Contact-rich MP4 generated for submission:
+   `videos/class_panda_contact_eval_5.mp4`.
 
 ## Remaining Submission Plan
 
 Since the final PDF will be compiled in Overleaf, the remaining local work should
 focus on code/video evidence and packaging.
 
-1. Generate a submission video in a standard format.
+1. Generate a submission video in a standard format. Completed.
    - Keep the existing GIFs for quick inspection.
-   - Also export the five-task run to MP4 if possible, because the assignment
-     asks for a video and MP4 is safer than GIF for Gradescope.
-   - Use the same evaluated run as `videos/class_panda_push_eval_5.gif` so the
-     video matches the reported `5/5` result.
+   - The contact-rich five-task run has been exported to
+     `videos/class_panda_contact_eval_5.mp4`.
+   - The report figure snapshots now come from the contact-rich video.
 
 2. Add a perception sanity metric. Completed.
    - `scripts/perception_sanity.py` runs over randomized resets.
@@ -227,6 +228,8 @@ focus on code/video evidence and packaging.
 3. Regenerate final evaluation artifacts after any code/config change.
    - Five-task video: `runs/class_panda_push_eval_5.json` and
      `videos/class_panda_push_eval_5.gif`.
+   - Contact-rich five-task video:
+     `videos/class_panda_contact_eval_5.mp4`.
    - Randomized smoke evaluation: `runs/class_panda_push_eval_20.json`.
    - Explicit language demos:
      `videos/push_language_red_to_blue.gif` and

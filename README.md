@@ -174,6 +174,12 @@ This config disables the planar push proxy, uses an overhead color-marker
 perception camera for object localization, and moves objects only through
 MuJoCo contact with the dedicated pusher body.
 
+The contact-rich five-task submission video is committed at:
+
+```text
+videos/class_panda_contact_eval_5.mp4
+```
+
 Run the perception sanity metric:
 
 ```powershell

@@ -138,10 +138,10 @@ The main evaluation used \path{configs/class_panda.yaml}. Each episode samples a
 \path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 20}
 \end{center}
 
-The required five-task video was generated with:
+The contact-rich five-task video was generated with:
 
 \begin{center}
-\path{python scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_push_eval_5.gif --video-episodes 5}
+\path{python scripts/evaluate.py --config configs/class_panda_contact.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_contact_eval_5.gif --video-episodes 5}
 \end{center}
 
 \subsection{Quantitative results}
@@ -173,18 +173,18 @@ The contact-only configuration uses an overhead camera and colored object-center
 
 \subsection{Qualitative results}
 
-Figure~\ref{fig:snapshots} shows snapshots from the generated five-task pushing video. The sequence illustrates the robot observing two objects, moving through the pushing behavior, and the target object entering the requested basket region. The full video file is included at \path{videos/class_panda_push_eval_5.gif}.
+Figure~\ref{fig:snapshots} shows snapshots from the generated contact-rich five-task pushing video. The sequence illustrates the robot observing two objects, moving through the contact pushing behavior, and the target object entering the requested basket region. The full video file is included at \path{videos/class_panda_contact_eval_5.mp4}, with the GIF version at \path{videos/class_panda_contact_eval_5.gif}.
 
 I also include two instruction-specific videos to make the language interface explicit: \path{videos/push_language_red_to_blue.gif} was generated from ``place the cracker box in the left basket,'' and \path{videos/push_language_yellow_to_green.gif} was generated from ``place the mustard bottle in the right basket.'' In both cases, the GIF frames contain the command as an on-screen language caption, the printed evaluation logs show the same instruction string for each episode, and the robot acts on that specified object-basket pair. Since most PDF viewers do not reliably play animated GIFs, the report includes still frames from these GIFs in Figure~\ref{fig:language_demos}, while the submission zip includes the full animated GIF files.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0000.png}
-\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0060.png}
-\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0120.png}
-\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0220.png}
-\includegraphics[width=0.19\linewidth]{figures/push_task_snapshot_0414.png}
-\caption{Snapshots from the five-task MuJoCo pushing video artifact. The camera view shows the language command caption and the two colored YCB objects and basket regions.}
+\includegraphics[width=0.19\linewidth]{figures/contact_task_snapshot_0000.png}
+\includegraphics[width=0.19\linewidth]{figures/contact_task_snapshot_0080.png}
+\includegraphics[width=0.19\linewidth]{figures/contact_task_snapshot_0160.png}
+\includegraphics[width=0.19\linewidth]{figures/contact_task_snapshot_0300.png}
+\includegraphics[width=0.19\linewidth]{figures/contact_task_snapshot_0420.png}
+\caption{Snapshots from the five-task contact-rich MuJoCo pushing video artifact. The camera view shows the language command caption, the two colored YCB objects, the basket regions, and the contact pusher moving objects through MuJoCo contact.}
 \label{fig:snapshots}
 \end{figure}
 
@@ -211,7 +211,7 @@ The repository includes a README with installation and run instructions. The sho
 
 \path{.\.venv\Scripts\python.exe -m pip install -e ".[mujoco]"}
 
-\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_push_eval_5.gif --video-episodes 5}
+\path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda_contact.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_contact_eval_5.gif --video-episodes 5}
 
 \path{.\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/push_language_yellow_to_green.gif}
 \end{center}
