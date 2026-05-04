@@ -43,35 +43,35 @@
     </body>
     <body name="panda_link0" childclass="robot" pos="0.0 0.0 0.0">
       <freejoint name="floating_base" />
-      <geom name="panda_link0_collision" type="mesh" mesh="link0.obj" class="collision" />
+      <geom name="panda_link0_collision" type="mesh" mesh="link0.obj" class="collision" contype="0" conaffinity="0" />
       <geom name="panda_link0_visual" material="panda_white" type="mesh" mesh="link0.obj" class="visual" />
       <body name="panda_link1" pos="0 0 0.333">
         <joint name="panda_joint1" type="hinge" range="-2.9671 2.9671" axis="0 0 1" />
-        <geom name="panda_link1_collision" type="mesh" mesh="link1.obj" class="collision" />
+        <geom name="panda_link1_collision" type="mesh" mesh="link1.obj" class="collision" contype="0" conaffinity="0" />
         <geom name="panda_link1_visual" material="panda_white" type="mesh" mesh="link1.obj" class="visual" />
         <body name="panda_link2" quat="0.7071067811882787 -0.7071067811848163 0.0 0.0">
           <joint name="panda_joint2" type="hinge" range="-1.8326 1.8326" axis="0 0 1" />
-          <geom name="panda_link2_collision" type="mesh" mesh="link2.obj" class="collision" />
+          <geom name="panda_link2_collision" type="mesh" mesh="link2.obj" class="collision" contype="0" conaffinity="0" />
           <geom name="panda_link2_visual" material="panda_white" type="mesh" mesh="link2.obj" class="visual" />
           <body name="panda_link3" pos="0 -0.316 0" quat="0.7071067811882787 0.7071067811848163 0.0 0.0">
             <joint name="panda_joint3" type="hinge" range="-2.9671 2.9671" axis="0 0 1" />
-            <geom name="panda_link3_collision" type="mesh" mesh="link3.obj" class="collision" />
+            <geom name="panda_link3_collision" type="mesh" mesh="link3.obj" class="collision" contype="0" conaffinity="0" />
             <geom name="panda_link3_visual" material="panda_white" type="mesh" mesh="link3.obj" class="visual" />
             <body name="panda_link4" pos="0.0825 0 0" quat="0.7071067811882787 0.7071067811848163 0.0 0.0">
               <joint name="panda_joint4" type="hinge" range="-3.1416 0.0" axis="0 0 1" />
-              <geom name="panda_link4_collision" type="mesh" mesh="link4.obj" class="collision" />
+              <geom name="panda_link4_collision" type="mesh" mesh="link4.obj" class="collision" contype="0" conaffinity="0" />
               <geom name="panda_link4_visual" material="panda_white" type="mesh" mesh="link4.obj" class="visual" />
               <body name="panda_link5" pos="-0.0825 0.384 0" quat="0.7071067811882787 -0.7071067811848163 0.0 0.0">
                 <joint name="panda_joint5" type="hinge" range="-2.9671 2.9671" axis="0 0 1" />
-                <geom name="panda_link5_collision" type="mesh" mesh="link5.obj" class="collision" />
+                <geom name="panda_link5_collision" type="mesh" mesh="link5.obj" class="collision" contype="0" conaffinity="0" />
                 <geom name="panda_link5_visual" material="panda_white" type="mesh" mesh="link5.obj" class="visual" />
                 <body name="panda_link6" quat="0.7071067811882787 0.7071067811848163 0.0 0.0">
                   <joint name="panda_joint6" type="hinge" range="-0.0873 3.8223" axis="0 0 1" />
-                  <geom name="panda_link6_collision" type="mesh" mesh="link6.obj" class="collision" />
+                  <geom name="panda_link6_collision" type="mesh" mesh="link6.obj" class="collision" contype="0" conaffinity="0" />
                   <geom name="panda_link6_visual" material="panda_white" type="mesh" mesh="link6.obj" class="visual" />
                   <body name="panda_link7" pos="0.088 0 0" quat="0.7071067811882787 0.7071067811848163 0.0 0.0">
                     <joint name="panda_joint7" type="hinge" range="-2.9671 2.9671" axis="0 0 1" />
-                    <geom name="panda_link7_collision" type="mesh" mesh="link7.obj" class="collision" />
+                    <geom name="panda_link7_collision" type="mesh" mesh="link7.obj" class="collision" contype="0" conaffinity="0" />
                     <geom name="panda_link7_visual" material="panda_white" type="mesh" mesh="link7.obj" class="visual" />
                     <body name="panda_link8" pos="0 0 0.107">
                       <!-- <body name="panda_hand" quat="0.9238795325113726 0.0 0.0 -0.38268343236488267"> -->

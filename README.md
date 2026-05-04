@@ -151,6 +151,7 @@ Current measured status on the class scene:
 
 - Final `push_fsm`: `5/5` required video successes, average `41.60` steps.
 - Final `push_fsm`: `20/20` randomized smoke-evaluation successes, average `38.75` steps.
+- Experimental contact-only `push_fsm` in `configs/class_panda_contact.yaml`: `18/20` randomized gate successes, success rate `0.900`, average `385.25` steps.
 - Legacy pick-and-place FSM: `300/300` successes, but it uses a manual attachment rule and is not the final assignment-compliance path.
 - NumPy linear BC smoke baseline: `0/20` evaluation successes.
 
@@ -158,4 +159,17 @@ Use `push_fsm` as the final executor for the report and submission video. It
 uses camera color perception and MuJoCo-integrated object motion. The stable
 submission config still uses a planar force/velocity push proxy during the push
 phase; an experimental contact-pusher implementation is present in the scene and
-environment code but is not reliable enough to use as the default final path.
+environment code. The contact-only path now passes the larger `18/20`
+randomized gate, but it remains separate from the default so the stable proxy
+baseline is still available for comparison.
+
+Run the experimental contact-rich path:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda_contact.yaml --policy push_fsm --episodes 5 --out runs\class_panda_contact_eval_5.json
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda_contact.yaml --policy push_fsm --episodes 20 --out runs\class_panda_contact_eval_20.json
+```
+
+This config disables the planar push proxy, uses an overhead color-marker
+perception camera for object localization, and moves objects only through
+MuJoCo contact with the dedicated pusher body.

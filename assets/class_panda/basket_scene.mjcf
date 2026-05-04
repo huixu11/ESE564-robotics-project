@@ -4,6 +4,8 @@
   <asset>
     <material name="cracker_mat" rgba="0.78 0.24 0.16 1"/>
     <material name="mustard_mat" rgba="0.95 0.76 0.12 1"/>
+    <material name="cracker_marker_mat" rgba="1.0 0.0 0.0 1"/>
+    <material name="mustard_marker_mat" rgba="1.0 1.0 0.0 1"/>
     <material name="left_basket_mat" rgba="0.20 0.47 0.78 0.35"/>
     <material name="right_basket_mat" rgba="0.24 0.62 0.35 0.35"/>
     <mesh name="ycb_cracker_box" file="../ycb/003_cracker_box/google_16k/textured.obj"/>
@@ -17,12 +19,14 @@
     <body name="cracker_box" pos="0.35 -0.1 0.04">
       <freejoint name="cracker_box_freejoint"/>
       <geom name="cracker_box_geom" type="box" size="0.035 0.025 0.055" material="cracker_mat" mass="0.12" conaffinity="17" friction="0.25 0.005 0.0001"/>
+      <geom name="cracker_box_color_marker" type="box" pos="0 0 0.058" size="0.030 0.024 0.003" material="cracker_marker_mat" contype="0" conaffinity="0" group="2"/>
       <geom name="cracker_box_visual" type="mesh" mesh="ycb_cracker_box" material="cracker_mat" contype="0" conaffinity="0" group="2"/>
     </body>
 
     <body name="mustard_bottle" pos="0.45 -0.1 0.046">
       <freejoint name="mustard_bottle_freejoint"/>
       <geom name="mustard_bottle_geom" type="box" size="0.030 0.030 0.045" material="mustard_mat" mass="0.15" conaffinity="17" friction="0.25 0.005 0.0001"/>
+      <geom name="mustard_bottle_color_marker" type="box" pos="0 0 0.048" size="0.025 0.025 0.003" material="mustard_marker_mat" contype="0" conaffinity="0" group="2"/>
       <geom name="mustard_bottle_visual" type="mesh" mesh="ycb_mustard_bottle" material="mustard_mat" contype="0" conaffinity="0" group="2"/>
     </body>
 
@@ -43,7 +47,14 @@
     </body>
 
     <body name="panda_contact_pusher" mocap="true" pos="0.35 0 0.40">
-      <geom name="panda_contact_pusher_geom" type="box" size="0.090 0.090 0.035" material="default_material" contype="16" conaffinity="0" condim="6" friction="2.5 0.05 0.0001"/>
+      <geom name="panda_contact_pusher_geom" type="box" size="0.060 0.060 0.035" material="default_material" contype="16" conaffinity="0" condim="6" friction="3.0 0.08 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
     </body>
   </worldbody>
+
+  <contact>
+    <pair geom1="panda_contact_pusher_geom" geom2="cracker_box_geom" condim="6" friction="3.0 0.08 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
+    <pair geom1="panda_contact_pusher_geom" geom2="mustard_bottle_geom" condim="6" friction="3.0 0.08 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
+    <pair geom1="table_collision" geom2="cracker_box_geom" condim="3" friction="0.22 0.005 0.0001" solref="0.008 1" solimp="0.75 0.95 0.001"/>
+    <pair geom1="table_collision" geom2="mustard_bottle_geom" condim="3" friction="0.22 0.005 0.0001" solref="0.008 1" solimp="0.75 0.95 0.001"/>
+  </contact>
 </mujoco>

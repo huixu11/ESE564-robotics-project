@@ -101,6 +101,7 @@ class MujocoBasketSortingEnv:
             )
 
         self.model = mujoco.MjModel.from_xml_path(str(self.model_xml))
+        self._apply_option_overrides()
         self.data = mujoco.MjData(self.model)
         self.names = self._resolve_names()
         self.kinematics = MujocoPandaKinematics(mujoco, self.model, self.data, self.names)
@@ -152,6 +153,7 @@ class MujocoBasketSortingEnv:
         self.last_ik_success = True
         self.phase = "reset"
         self._sync_contact_pusher(initial=True)
+        self._settle_scene(int(self.mj_cfg.get("reset_settle_steps", 0)), initial_qpos)
         return self._observation()
 
     def step(self, action: np.ndarray | list[float]) -> tuple[dict[str, Any], float, bool, dict[str, Any]]:
@@ -210,6 +212,8 @@ class MujocoBasketSortingEnv:
             "ik_success": self.last_ik_success,
             "phase": self.phase,
         }
+        if self.env_cfg.get("contact_debug", {}).get("enabled", False):
+            info.update(self._contact_debug_info())
         return self._observation(), reward, done, info
 
     def render_rgb(self) -> np.ndarray:
@@ -404,6 +408,12 @@ class MujocoBasketSortingEnv:
             raise KeyError(f"MuJoCo object named {name!r} was not found in {self.model_xml}")
         return obj_id
 
+    def _apply_option_overrides(self) -> None:
+        for name, value in self.mj_cfg.get("option", {}).items():
+            if not hasattr(self.model.opt, name):
+                raise KeyError(f"MuJoCo option {name!r} is not available on this model.")
+            setattr(self.model.opt, name, value)
+
     def _arm_joint_limits(self) -> list[list[float]]:
         limits: list[list[float]] = []
         fallback = self.config["controller"]["joint_limits"]
@@ -461,6 +471,15 @@ class MujocoBasketSortingEnv:
             if not self.gripper_open:
                 ctrl_value = float(self.mj_cfg.get("closed_gripper_ctrl", 0.0))
             self.data.qpos[self.names.gripper_qpos_addr] = ctrl_value
+
+    def _settle_scene(self, steps: int, arm_qpos: np.ndarray) -> None:
+        for _ in range(max(0, int(steps))):
+            if self.mj_cfg.get("direct_joint_position", False):
+                self._lock_direct_robot_state(arm_qpos)
+            self.mujoco.mj_step(self.model, self.data)
+            if self.mj_cfg.get("direct_joint_position", False):
+                self._lock_direct_robot_state(arm_qpos)
+        self.mujoco.mj_forward(self.model, self.data)
 
     def _apply_arm_target(self, qpos: np.ndarray) -> None:
         if self.mj_cfg.get("direct_joint_position", False) or not self.names.arm_actuator_ids:
@@ -546,6 +565,24 @@ class MujocoBasketSortingEnv:
             body_id = self.names.object_body_ids[self.task.target_object]
             self.data.xfrc_applied[body_id, 0] = force * direction[0]
             self.data.xfrc_applied[body_id, 1] = force * direction[1]
+
+    def _contact_debug_info(self) -> dict[str, Any]:
+        pairs = []
+        max_pairs = int(self.env_cfg.get("contact_debug", {}).get("max_pairs", 12))
+        for idx in range(min(int(self.data.ncon), max_pairs)):
+            contact = self.data.contact[idx]
+            geom1 = self.mujoco.mj_id2name(self.model, self.mujoco.mjtObj.mjOBJ_GEOM, int(contact.geom1))
+            geom2 = self.mujoco.mj_id2name(self.model, self.mujoco.mjtObj.mjOBJ_GEOM, int(contact.geom2))
+            pairs.append([geom1 or str(int(contact.geom1)), geom2 or str(int(contact.geom2))])
+        info: dict[str, Any] = {
+            "num_contacts": int(self.data.ncon),
+            "contact_pairs": pairs,
+        }
+        if self.task is not None:
+            info["target_object_pos"] = self._object_pos(self.task.target_object).tolist()
+        if self._contact_pusher_enabled():
+            info["contact_pusher_pos"] = self._contact_pusher_pos().tolist()
+        return info
 
     def _update_attachment(self) -> None:
         if self.task is None:

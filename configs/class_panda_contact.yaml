@@ -1,0 +1,129 @@
+env:
+  name: mujoco
+  max_steps: 900
+  table_bounds:
+    x: [0.22, 0.58]
+    y: [-0.24, 0.10]
+  workspace_bounds:
+    x: [0.05, 0.75]
+    y: [-0.45, 0.45]
+    z: [0.02, 0.75]
+  safe_z: 0.22
+  grasp_z: 0.085
+  place_z: 0.11
+  object_spawn_z:
+    cracker_box: 0.058
+    mustard_bottle: 0.050
+  object_min_distance: 0.19
+  basket_half_extent: 0.105
+  grasp_radius: 0.055
+  camera:
+    width: 320
+    height: 320
+  perception:
+    enabled: true
+    camera_name: overhead
+    min_pixels: 20
+    image_to_world_affine:
+      - [0.0017647, -0.00378195, 0.60149898]
+      - [-0.00268734, -0.00116214, 0.62269681]
+    object_affines:
+      cracker_box:
+        - [0.00277955, 0.00004454, -0.08799663]
+        - [-0.00006609, -0.00254292, 0.42511252]
+      mustard_bottle:
+        - [0.00306834, 0.00003555, -0.13909816]
+        - [-0.00007015, -0.00304209, 0.50605041]
+    color_masks:
+      cracker_box:
+        lower: [220, 0, 0]
+        upper: [255, 90, 90]
+        min_saturation: 80
+        dominant_channel: 0
+        min_channel_margin: 80
+      mustard_bottle:
+        lower: [220, 220, 0]
+        upper: [255, 255, 90]
+        min_saturation: 80
+      left:
+        lower: [40, 70, 80]
+        upper: [150, 190, 210]
+      right:
+        lower: [40, 80, 50]
+        upper: [150, 190, 150]
+  push:
+    push_z: 0.060
+    start_offset: 0.130
+    goal_overshoot: 0.035
+    contact_goal_offset: 0.105
+    predicted_lateral_lead_offset: 0.150
+    forward_uses_target_x: true
+    use_predicted_segment_goal: true
+    push_steps: 180
+    two_stage: true
+    x_alignment_tolerance: 0.04
+    settle_steps: 12
+    between_segment_lift_steps: 35
+  physics_push:
+    enabled: false
+  contact_debug:
+    enabled: true
+    max_pairs: 16
+  basket_poses:
+    left: [0.25, 0.28, 0.035]
+    right: [0.55, 0.28, 0.035]
+  mujoco:
+    model_xml: assets/class_panda/basket_scene.mjcf
+    ee_site: null
+    ee_body: panda_hand
+    camera_name: demo_view
+    control_substeps: 24
+    direct_joint_position: true
+    contact_pusher_body: panda_contact_pusher
+    reset_settle_steps: 80
+    option:
+      timestep: 0.003
+      iterations: 80
+      noslip_iterations: 20
+    initial_qpos: [0.0, -0.75, 0.0, -2.35, 0.0, 1.65, 0.78]
+    arm_joint_names:
+      - panda_joint1
+      - panda_joint2
+      - panda_joint3
+      - panda_joint4
+      - panda_joint5
+      - panda_joint6
+      - panda_joint7
+    arm_actuator_names:
+      - panda_joint1_pos
+      - panda_joint2_pos
+      - panda_joint3_pos
+      - panda_joint4_pos
+      - panda_joint5_pos
+      - panda_joint6_pos
+      - panda_joint7_pos
+    gripper_actuator_names:
+      - panda_finger_joint1_pos
+      - panda_finger_joint2_pos
+    gripper_joint_names:
+      - panda_finger_joint1
+      - panda_finger_joint2
+    open_gripper_ctrl: 0.04
+    closed_gripper_ctrl: 0.0
+    object_body_names:
+      cracker_box: cracker_box
+      mustard_bottle: mustard_bottle
+    object_free_joint_names:
+      cracker_box: cracker_box_freejoint
+      mustard_bottle: mustard_bottle_freejoint
+    basket_body_names:
+      left: left_basket
+      right: right_basket
+
+fsm:
+  tolerance: 0.016
+  retreat_steps: 10
+  speed_to_step:
+    careful: 0.005
+    normal: 0.006
+    fast: 0.007
