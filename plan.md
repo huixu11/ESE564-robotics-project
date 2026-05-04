@@ -193,11 +193,16 @@ as `configs/class_panda_contact.yaml`.
 3. Experimental contact-only randomized gate:
    `18/20`, success rate `0.900`, average `385.25` steps, using
    `configs/class_panda_contact.yaml`.
-4. Explicit language-command pushing videos generated:
+4. Perception sanity metrics generated:
+   - Stable demo-view config: `99.5%` detection, mean `7.04 cm`,
+     max `15.49 cm` tabletop error over 100 randomized resets.
+   - Contact overhead-marker config: `65.5%` detection, mean `2.11 cm`,
+     max `6.03 cm` error over detected objects.
+5. Explicit language-command pushing videos generated:
    - red/cracker box to blue/left basket,
    - yellow/mustard bottle to green/right basket.
-5. README and report now describe `push_fsm` as the final path.
-6. Remaining manual step: compile `report/final_project_report.tex` to PDF with Overleaf, MiKTeX, or TeX Live.
+6. README and report now describe `push_fsm` as the final path.
+7. Remaining manual step: compile `report/final_project_report.tex` to PDF with Overleaf, MiKTeX, or TeX Live.
 
 ## Remaining Submission Plan
 
@@ -211,12 +216,13 @@ focus on code/video evidence and packaging.
    - Use the same evaluated run as `videos/class_panda_push_eval_5.gif` so the
      video matches the reported `5/5` result.
 
-2. Add a perception sanity metric.
-   - Run a small script over randomized resets.
-   - Compare color-segmentation object estimates against simulator object poses.
-   - Report mean and max tabletop localization error in the report Results
-     section.
-   - This strengthens the claim that the policy uses camera-derived world state.
+2. Add a perception sanity metric. Completed.
+   - `scripts/perception_sanity.py` runs over randomized resets.
+   - It compares color-segmentation object estimates against simulator object poses.
+   - The report Results section now includes detection rate plus mean and max
+     tabletop localization error.
+   - This strengthens the claim that the policy uses camera-derived world state
+     and identifies perception occlusion as a contact-only failure source.
 
 3. Regenerate final evaluation artifacts after any code/config change.
    - Five-task video: `runs/class_panda_push_eval_5.json` and

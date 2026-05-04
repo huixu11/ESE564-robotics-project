@@ -173,3 +173,13 @@ Run the experimental contact-rich path:
 This config disables the planar push proxy, uses an overhead color-marker
 perception camera for object localization, and moves objects only through
 MuJoCo contact with the dedicated pusher body.
+
+Run the perception sanity metric:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\perception_sanity.py --config configs\class_panda.yaml --samples 100 --out runs\class_panda_perception_sanity_100.json
+.\.venv\Scripts\python.exe scripts\perception_sanity.py --config configs\class_panda_contact.yaml --samples 100 --out runs\class_panda_contact_perception_sanity_100.json
+```
+
+This compares color-segmentation tabletop estimates against MuJoCo object poses
+after randomized resets.

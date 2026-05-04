@@ -165,6 +165,12 @@ Experimental contact-only gate & 20 & 18 & 90\% & 385.25 & 130--900 \\
 \end{tabular}
 \end{table}
 
+\subsection{Perception sanity check}
+
+I also measured the color-perception module independently from the control policy by randomizing the scene, rendering the configured perception camera, estimating each object's tabletop position, and comparing the estimate to the MuJoCo object pose. The stable demo-view configuration detected 199/200 object instances over 100 randomized resets, with mean tabletop error 7.04 cm and maximum error 15.49 cm. This is coarse but sufficient for the stable proxy-based push executor because the push policy uses broad approach regions.
+
+The contact-only configuration uses an overhead camera and colored object-center markers. For detected objects, it was more accurate: mean error 2.11 cm and maximum error 6.03 cm. However, it detected only 131/200 object instances because the arm can occlude the overhead markers at some reset poses. This explains why the contact-only policy is more physically faithful but still less reliable than the proxy baseline.
+
 \subsection{Qualitative results}
 
 Figure~\ref{fig:snapshots} shows snapshots from the generated five-task pushing video. The sequence illustrates the robot observing two objects, moving through the pushing behavior, and the target object entering the requested basket region. The full video file is included at \path{videos/class_panda_push_eval_5.gif}.
@@ -221,6 +227,7 @@ The most important files are:
   \item \path{src/basket_sorting/push_fsm.py}: final scripted pushing policy.
   \item \path{src/basket_sorting/envs/mujoco_env.py}: MuJoCo environment and differential IK integration.
   \item \path{scripts/evaluate.py}: evaluation entry point.
+  \item \path{scripts/perception_sanity.py}: perception localization metric.
 \end{itemize}
 
 \section{References}
