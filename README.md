@@ -7,6 +7,7 @@ This folder contains a runnable scaffold for the project proposal:
 - scripted pick-and-place and pushing FSM experts,
 - color-based camera perception for the final MuJoCo path,
 - differential IK / continuity-aware controller,
+- RRT-Connect workspace planning for the experimental grasp approach/transfer path,
 - demonstration collection,
 - lightweight behavior cloning baseline,
 - evaluation and GIF generation.
@@ -152,7 +153,7 @@ Current measured status on the class scene:
 - Final `push_fsm`: `5/5` required video successes, average `41.60` steps.
 - Final `push_fsm`: `20/20` randomized smoke-evaluation successes, average `38.75` steps.
 - Experimental contact-only `push_fsm` in `configs/class_panda_contact.yaml`: `18/20` randomized gate successes, success rate `0.900`, average `385.25` steps.
-- Experimental contact-rich TAMP grasp path in `configs/class_panda_grasp.yaml` with `--policy tamp_grasp`: `5/5` randomized successes, average `242.60` steps.
+- Experimental contact-rich TAMP grasp path in `configs/class_panda_grasp.yaml` with `--policy tamp_grasp`: `5/5` randomized successes, average `241.60` steps.
 - Legacy pick-and-place FSM: `300/300` successes, but it uses a manual attachment rule and is not the final assignment-compliance path.
 - NumPy linear BC smoke baseline: `0/20` evaluation successes.
 
@@ -200,19 +201,26 @@ Run the experimental TAMP grasp path:
 
 This path parses the same language commands into a symbolic
 `place(object, basket)` goal, samples object-specific grasp candidates, checks
-workspace/gripper feasibility, then executes
-`pre_grasp -> grasp -> close -> lift -> transfer -> place -> release -> retreat`.
-It is useful evidence for a grasp/TAMP direction. The grasp config enables a
-dedicated MuJoCo contact gripper: a dynamic tool body welded to a mocap target,
-two side pads, a top adhesive pad, and a MuJoCo adhesion actuator that turns on
-while the gripper is closed. This path does not use the manual attachment
-fallback, but it is still a simplified adhesive gripper rather than fully tuned
-Franka finger contact. The grasp config also enables Panda link collision geoms
-against the YCB objects, following the planning-scene idea used by MoveIt/TAMP:
-only the intended gripper-pad contacts are allowed, while arm links can no
-longer pass through objects silently. The visible Panda hand is offset above the
-contact gripper target so the hand does not drive through the cracker box while
-the lower contact pads perform the grasp.
+workspace/gripper feasibility, and then runs an RRT-Connect planner for the
+approach and transfer portions of the pick-and-place skeleton. The implemented
+RRT planner searches in 3D end-effector workspace around inflated object boxes;
+the resulting waypoints are executed through the existing differential IK
+controller. This is a project-sized approximation to joint-space MoveIt-style
+planning, not a full articulated-arm RRT with exact mesh collision checking.
+
+The executed skeleton is
+`rrt_approach -> grasp -> close -> lift -> rrt_transfer -> place -> release -> rrt_retreat`.
+The grasp config enables a dedicated MuJoCo contact gripper: a dynamic tool body
+welded to a mocap target, two side pads, a top adhesive pad, and a MuJoCo
+adhesion actuator that turns on while the gripper is closed. This path does not
+use the manual attachment fallback, but it is still a simplified adhesive
+gripper rather than fully tuned Franka finger contact. The grasp config also
+enables Panda link collision geoms against the YCB objects, following the
+planning-scene idea used by MoveIt/TAMP: only the intended gripper-pad contacts
+are allowed, while arm links can no longer pass through objects silently. The
+visible Panda hand is offset above the contact gripper target so the hand does
+not drive through the cracker box while the lower contact pads perform the
+grasp.
 
 The contact-rich grasp MP4 artifact is:
 

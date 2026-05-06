@@ -17,6 +17,7 @@ from basket_sorting.env_factory import make_env
 from basket_sorting.fsm import ScriptedPickPlaceFSM
 from basket_sorting.perception import estimate_color_positions
 from basket_sorting.push_fsm import ScriptedPushFSM
+from basket_sorting.rrt import AABBObstacle, RRTConnectConfig, RRTConnectPlanner
 from basket_sorting.rollout import run_episode
 from basket_sorting.tamp_grasp import ProjectTAMPGraspPlanner, ScriptedTAMPGraspPolicy
 from basket_sorting.tasks import parse_instruction
@@ -94,6 +95,33 @@ class BaselineTests(unittest.TestCase):
         self.assertEqual(plan.candidate.object_name, "mustard_bottle")
         self.assertTrue(np.allclose(plan.pre_place[:2], [0.55, 0.28]))
         self.assertGreater(plan.lift[2], plan.grasp[2])
+        self.assertGreaterEqual(len(plan.approach_path), 1)
+        self.assertGreaterEqual(len(plan.transfer_path), 1)
+
+    def test_rrt_connect_routes_around_workspace_obstacle(self) -> None:
+        bounds = np.array([[0.0, 1.0], [-0.5, 0.5], [0.0, 0.5]], dtype=float)
+        obstacle = AABBObstacle(
+            name="block",
+            center=np.array([0.5, 0.0, 0.25], dtype=float),
+            half_extents=np.array([0.10, 0.20, 0.25], dtype=float),
+        )
+        planner = RRTConnectPlanner(
+            RRTConnectConfig(
+                bounds=bounds,
+                step_size=0.08,
+                max_iterations=400,
+                line_resolution=0.01,
+                clearance=np.array([0.02, 0.02, 0.0], dtype=float),
+                seed=3,
+            ),
+            obstacles=[obstacle],
+        )
+        path = planner.plan(np.array([0.1, 0.0, 0.25]), np.array([0.9, 0.0, 0.25]))
+        self.assertIsNotNone(path)
+        assert path is not None
+        self.assertGreater(len(path), 2)
+        for start, goal in zip(path[:-1], path[1:]):
+            self.assertTrue(planner.checker.segment_is_valid(start, goal))
 
     def test_tamp_grasp_policy_uses_shared_action_format(self) -> None:
         config = load_config("configs/class_panda_grasp.yaml")
@@ -105,7 +133,7 @@ class BaselineTests(unittest.TestCase):
             "baskets": {"left": np.array([0.25, 0.28, 0.035], dtype=float)},
         }
         output = policy.act(obs)
-        self.assertEqual(output.phase, "pre_grasp")
+        self.assertEqual(output.phase, "rrt_approach")
         self.assertEqual(output.action.shape, (4,))
 
     def test_mujoco_config_fails_clearly_when_dependency_missing(self) -> None:

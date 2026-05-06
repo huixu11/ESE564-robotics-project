@@ -201,7 +201,13 @@ the stable baselines.
      and candidates whose pre-grasp/lift/place waypoints violate simple
      clearance constraints.
    - Execute the selected skeleton:
-     `pre_grasp -> grasp -> close -> lift -> transfer -> place -> release -> retreat`.
+     `rrt_approach -> grasp -> close -> lift -> rrt_transfer -> place -> release -> rrt_retreat`.
+   - Current status: `src/basket_sorting/rrt.py` implements a deterministic
+     RRT-Connect planner over 3D end-effector workspace. It plans approach,
+     transfer, and retreat waypoint paths around inflated object AABBs; the
+     existing differential IK controller executes those waypoints. This is a
+     scoped project implementation, not a full joint-space RRT with exact mesh
+     collision checking.
 
 2. Add a separate MuJoCo grasp config.
    - New config: `configs/class_panda_grasp.yaml`.
@@ -240,8 +246,8 @@ the stable baselines.
      the smoke gate passes.
    - Only update the report's main result if the grasp path becomes visually and
      quantitatively stronger than the contact-push path.
-   - Current contact-rich, collision-aware TAMP grasp result: `5/5`, success rate `1.000`,
-     average `242.60` steps, using `configs/class_panda_grasp.yaml` and
+   - Current contact-rich, collision-aware TAMP+RRT grasp result: `5/5`, success rate `1.000`,
+     average `241.60` steps, using `configs/class_panda_grasp.yaml` and
      `--policy tamp_grasp`.
 
 ## Plan to Solve Fully Contact-Rich Manipulation
@@ -329,8 +335,9 @@ as `configs/class_panda_contact.yaml`.
 7. Experimental TAMP grasp path added:
    - `configs/class_panda_grasp.yaml`
    - `src/basket_sorting/tamp_grasp.py`
+   - `src/basket_sorting/rrt.py`
    - `scripts/evaluate.py --policy tamp_grasp`
-   - contact-rich collision-aware five-episode result: `5/5`, average `242.60` steps.
+   - contact-rich collision-aware TAMP+RRT five-episode result: `5/5`, average `241.60` steps.
 8. Remaining manual step: compile `report/final_project_report.tex` to PDF with Overleaf, MiKTeX, or TeX Live.
 9. Contact-rich MP4 generated for submission:
    `videos/class_panda_contact_eval_5.mp4`.

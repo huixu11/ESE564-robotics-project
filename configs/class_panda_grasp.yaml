@@ -134,6 +134,20 @@ tamp_grasp:
   min_lift_clearance: 0.060
   close_steps: 24
   release_steps: 16
+  rrt:
+    enabled: true
+    step_size: 0.055
+    goal_tolerance: 0.025
+    max_iterations: 220
+    line_resolution: 0.012
+    smooth_iterations: 32
+    goal_sample_rate: 0.15
+    seed: 17
+    clearance: [0.028, 0.028, 0.035]
+    fallback_z: 0.335
+    object_half_extents:
+      cracker_box: [0.040, 0.030, 0.070]
+      mustard_bottle: [0.035, 0.035, 0.060]
   candidate_z_offsets: [0.0, 0.006, -0.004]
   candidate_xy_offsets:
     - [0.0, 0.0]
