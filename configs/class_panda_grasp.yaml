@@ -64,7 +64,7 @@ env:
     control_substeps: 24
     direct_joint_position: true
     grasp_tool_body: panda_grasp_tool_target
-    grasp_tool_ee_offset: [0.0, 0.0, -0.085]
+    grasp_tool_ee_offset: [0.0, 0.0, -0.140]
     grasp_tool_joint_names:
       - panda_grasp_left_slide
       - panda_grasp_right_slide
@@ -126,10 +126,10 @@ env:
       right: right_basket
 
 tamp_grasp:
-  pre_grasp_z: 0.20
-  lift_z: 0.28
-  place_z: 0.18
-  retreat_z: 0.24
+  pre_grasp_z: 0.30
+  lift_z: 0.335
+  place_z: 0.235
+  retreat_z: 0.30
   max_grasp_width: 0.080
   min_lift_clearance: 0.060
   close_steps: 24
@@ -143,10 +143,10 @@ tamp_grasp:
     - [0.0, -0.006]
   object_specs:
     cracker_box:
-      grasp_z: 0.145
+      grasp_z: 0.200
       grasp_width: 0.052
     mustard_bottle:
-      grasp_z: 0.131
+      grasp_z: 0.186
       grasp_width: 0.060
 
 fsm:

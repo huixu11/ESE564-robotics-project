@@ -152,7 +152,7 @@ Current measured status on the class scene:
 - Final `push_fsm`: `5/5` required video successes, average `41.60` steps.
 - Final `push_fsm`: `20/20` randomized smoke-evaluation successes, average `38.75` steps.
 - Experimental contact-only `push_fsm` in `configs/class_panda_contact.yaml`: `18/20` randomized gate successes, success rate `0.900`, average `385.25` steps.
-- Experimental contact-rich TAMP grasp path in `configs/class_panda_grasp.yaml` with `--policy tamp_grasp`: `5/5` randomized successes, average `254.60` steps.
+- Experimental contact-rich TAMP grasp path in `configs/class_panda_grasp.yaml` with `--policy tamp_grasp`: `5/5` randomized successes, average `242.60` steps.
 - Legacy pick-and-place FSM: `300/300` successes, but it uses a manual attachment rule and is not the final assignment-compliance path.
 - NumPy linear BC smoke baseline: `0/20` evaluation successes.
 
