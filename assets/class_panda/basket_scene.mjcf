@@ -50,19 +50,33 @@
       <geom name="panda_contact_pusher_geom" type="box" size="0.060 0.060 0.035" material="default_material" contype="16" conaffinity="0" condim="6" friction="3.0 0.08 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
     </body>
 
-    <body name="panda_grasp_tool" mocap="true" pos="0.35 0 0.30">
+    <body name="panda_grasp_tool_target" mocap="true" pos="0.35 0 0.30">
+      <site name="panda_grasp_tool_target_site" pos="0 0 0" size="0.006" rgba="0.1 0.1 0.1 1"/>
+    </body>
+
+    <body name="panda_grasp_tool" pos="0.35 0 0.30">
+      <freejoint name="panda_grasp_tool_freejoint"/>
+      <inertial pos="0 0 0" mass="0.12" diaginertia="0.0003 0.0003 0.0003"/>
       <site name="panda_grasp_tool_site" pos="0 0 0" size="0.006" rgba="0.1 0.1 0.1 1"/>
-      <geom name="panda_grasp_lift_shelf_geom" type="box" pos="0 0 -0.095" size="0.048 0.050 0.004" material="default_material" contype="16" conaffinity="0" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001" mass="0.04" group="3"/>
+      <geom name="panda_grasp_top_pad_geom" type="box" pos="0 0 0.052" size="0.070 0.080 0.006" material="default_material" contype="16" conaffinity="0" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001" margin="0.004" mass="0.04" group="3"/>
       <body name="panda_grasp_left_pad" pos="0 0.085 0">
         <joint name="panda_grasp_left_slide" type="slide" axis="0 -1 0" range="0 0.070" damping="2.0"/>
-        <geom name="panda_grasp_left_pad_geom" type="box" size="0.045 0.012 0.048" material="default_material" contype="16" conaffinity="0" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001" mass="0.04" group="3"/>
+        <geom name="panda_grasp_left_pad_geom" type="box" size="0.045 0.012 0.048" material="default_material" contype="16" conaffinity="0" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001" margin="0.004" mass="0.04" group="3"/>
       </body>
       <body name="panda_grasp_right_pad" pos="0 -0.085 0">
         <joint name="panda_grasp_right_slide" type="slide" axis="0 1 0" range="0 0.070" damping="2.0"/>
-        <geom name="panda_grasp_right_pad_geom" type="box" size="0.045 0.012 0.048" material="default_material" contype="16" conaffinity="0" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001" mass="0.04" group="3"/>
+        <geom name="panda_grasp_right_pad_geom" type="box" size="0.045 0.012 0.048" material="default_material" contype="16" conaffinity="0" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001" margin="0.004" mass="0.04" group="3"/>
       </body>
     </body>
   </worldbody>
+
+  <actuator>
+    <adhesion name="panda_grasp_tool_adhesion" body="panda_grasp_tool" gain="150.0" ctrlrange="0 1"/>
+  </actuator>
+
+  <equality>
+    <weld name="panda_grasp_tool_weld" body1="panda_grasp_tool_target" body2="panda_grasp_tool" solref="0.018 1" solimp="0.85 0.95 0.001"/>
+  </equality>
 
   <contact>
     <pair geom1="panda_contact_pusher_geom" geom2="cracker_box_geom" condim="6" friction="3.0 0.08 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
@@ -71,8 +85,8 @@
     <pair geom1="panda_grasp_right_pad_geom" geom2="cracker_box_geom" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
     <pair geom1="panda_grasp_left_pad_geom" geom2="mustard_bottle_geom" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
     <pair geom1="panda_grasp_right_pad_geom" geom2="mustard_bottle_geom" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
-    <pair geom1="panda_grasp_lift_shelf_geom" geom2="cracker_box_geom" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
-    <pair geom1="panda_grasp_lift_shelf_geom" geom2="mustard_bottle_geom" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
+    <pair geom1="panda_grasp_top_pad_geom" geom2="cracker_box_geom" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
+    <pair geom1="panda_grasp_top_pad_geom" geom2="mustard_bottle_geom" condim="6" friction="5.0 0.12 0.0001" solref="0.006 1" solimp="0.85 0.95 0.001"/>
     <pair geom1="table_collision" geom2="cracker_box_geom" condim="3" friction="0.22 0.005 0.0001" solref="0.008 1" solimp="0.75 0.95 0.001"/>
     <pair geom1="table_collision" geom2="mustard_bottle_geom" condim="3" friction="0.22 0.005 0.0001" solref="0.008 1" solimp="0.75 0.95 0.001"/>
   </contact>

@@ -63,10 +63,16 @@ env:
     camera_name: demo_view
     control_substeps: 24
     direct_joint_position: true
-    grasp_tool_body: null
-    grasp_tool_joint_names: []
-    grasp_tool_open_qpos: []
-    grasp_tool_closed_qpos: []
+    grasp_tool_body: panda_grasp_tool_target
+    grasp_tool_joint_names:
+      - panda_grasp_left_slide
+      - panda_grasp_right_slide
+    grasp_tool_open_qpos: [0.0, 0.0]
+    grasp_tool_closed_qpos: [0.055, 0.055]
+    adhesion_actuator_names:
+      - panda_grasp_tool_adhesion
+    adhesion_open_ctrl: 0.0
+    adhesion_closed_ctrl: 1.0
     reset_settle_steps: 80
     option:
       timestep: 0.003
@@ -128,7 +134,7 @@ tamp_grasp:
       grasp_z: 0.060
       grasp_width: 0.052
     mustard_bottle:
-      grasp_z: 0.052
+      grasp_z: 0.046
       grasp_width: 0.060
 
 fsm:
@@ -137,6 +143,6 @@ fsm:
   release_hold_steps: 10
   retreat_steps: 10
   speed_to_step:
-    careful: 0.005
-    normal: 0.006
-    fast: 0.007
+    careful: 0.0035
+    normal: 0.0045
+    fast: 0.0055

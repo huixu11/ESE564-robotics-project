@@ -36,7 +36,7 @@
 \maketitle
 
 \begin{abstract}
-This project implements a language-conditioned tabletop sorting system for a Franka Panda-style robot arm in MuJoCo. The task is to move one of two YCB objects, a red cracker box or a yellow mustard bottle, into one of two colored baskets according to a natural-language command supplied at run time. The final system combines a lightweight language parser, color-based camera perception, a finite-state pushing policy, a continuity-aware differential inverse kinematics controller, and a MuJoCo scene built from course Panda assets and public YCB meshes. The final perception-and-pushing executor solved all five required video tasks and achieved 20/20 successes on a randomized smoke evaluation. I also added a separate contact-only configuration that disables the planar proxy and achieved 18/20 successes in a randomized contact-rich evaluation. As an exploratory extension, I implemented a small task-and-motion-planning grasp pipeline that achieved 5/5 successes in a randomized smoke run. The video artifacts include on-frame language captions to show the command being executed.
+This project implements a language-conditioned tabletop sorting system for a Franka Panda-style robot arm in MuJoCo. The task is to move one of two YCB objects, a red cracker box or a yellow mustard bottle, into one of two colored baskets according to a natural-language command supplied at run time. The final system combines a lightweight language parser, color-based camera perception, a finite-state pushing policy, a continuity-aware differential inverse kinematics controller, and a MuJoCo scene built from course Panda assets and public YCB meshes. The final perception-and-pushing executor solved all five required video tasks and achieved 20/20 successes on a randomized smoke evaluation. I also added a separate contact-only configuration that disables the planar proxy and achieved 18/20 successes in a randomized contact-rich evaluation. As an exploratory extension, I implemented a task-and-motion-planning grasp pipeline with a MuJoCo contact gripper; it achieved 5/5 successes in a randomized contact-rich grasp run. The video artifacts include on-frame language captions to show the command being executed.
 \end{abstract}
 
 \section{Introduction}
@@ -147,7 +147,7 @@ The grasp policy is implemented in \path{src/basket_sorting/tamp_grasp.py} and r
 
 Future versions could replace the hand-written grasp sampler with a learned grasp scorer such as Dex-Net/GQ-CNN \cite{dexnet2} or Contact-GraspNet \cite{contactgraspnet}, while keeping the same symbolic goal and execution skeleton.
 
-This extension is useful because it makes the system architecture closer to a standard pick-and-place manipulation planner. However, I keep it separate from the main result. The default grasp configuration uses the stable gripper attachment model so that the TAMP skeleton can be evaluated reliably. I also added optional MuJoCo contact-pad infrastructure for a contact-only grasp tool, but that variant still needs tuning because the first pure-contact grasp tests disturbed the object before closing.
+This extension is useful because it makes the system architecture closer to a standard pick-and-place manipulation planner. However, I keep it separate from the main pushing result because it was added late in the project. The grasp configuration disables the manual attachment fallback by enabling a dedicated MuJoCo grasp tool. The tool is a regular dynamic body welded to a mocap target, with two side contact pads, a top adhesive contact pad, and a MuJoCo adhesion actuator that turns on during the \texttt{close} and transport phases. Object motion in this path comes from MuJoCo contact and adhesion forces rather than direct object pose setting.
 
 \subsection{Learning baseline}
 
@@ -186,7 +186,7 @@ Explicit cracker-to-left command & 3 & 3 & 100\% & 48.00 & 42--52 \\
 Explicit mustard-to-right command & 3 & 3 & 100\% & 31.67 & 27--36 \\
 Randomized smoke evaluation & 20 & 20 & 100\% & 38.75 & 25--52 \\
 Experimental contact-only gate & 20 & 18 & 90\% & 385.25 & 130--900 \\
-Experimental TAMP grasp smoke & 5 & 5 & 100\% & 218.60 & 174--240 \\
+Experimental contact-rich TAMP grasp & 5 & 5 & 100\% & 298.20 & 225--341 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -203,7 +203,7 @@ Figure~\ref{fig:snapshots} shows snapshots from the generated contact-rich five-
 
 I also include two instruction-specific videos to make the language interface explicit: \path{videos/push_language_red_to_blue.gif} was generated from ``place the cracker box in the left basket,'' and \path{videos/push_language_yellow_to_green.gif} was generated from ``place the mustard bottle in the right basket.'' In both cases, the GIF frames contain the command as an on-screen language caption, the printed evaluation logs show the same instruction string for each episode, and the robot acts on that specified object-basket pair. Since most PDF viewers do not reliably play animated GIFs, the report includes still frames from these GIFs in Figure~\ref{fig:language_demos}, while the submission zip includes the full animated GIF files.
 
-The experimental TAMP grasp extension has its own video artifact at \path{videos/class_panda_grasp_eval_5.mp4}, with the GIF version at \path{videos/class_panda_grasp_eval_5.gif}. Figure~\ref{fig:grasp_tamp} shows still frames from the first grasp episode. This figure is included to document the grasping direction, not to replace the contact-push result as the main physics evidence.
+The experimental TAMP grasp extension has its own video artifact at \path{videos/class_panda_grasp_contact_eval_5.mp4}, with the GIF version at \path{videos/class_panda_grasp_contact_eval_5.gif}. Figure~\ref{fig:grasp_tamp} shows still frames from the first contact-rich grasp episode. This figure is included to document the grasping direction, not to replace the contact-push result as the main physics evidence.
 
 \begin{figure}[h]
 \centering
@@ -226,12 +226,12 @@ The experimental TAMP grasp extension has its own video artifact at \path{videos
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.19\linewidth]{figures/grasp_task_snapshot_0000.png}
-\includegraphics[width=0.19\linewidth]{figures/grasp_task_snapshot_0030.png}
-\includegraphics[width=0.19\linewidth]{figures/grasp_task_snapshot_0060.png}
-\includegraphics[width=0.19\linewidth]{figures/grasp_task_snapshot_0080.png}
-\includegraphics[width=0.19\linewidth]{figures/grasp_task_snapshot_0100.png}
-\caption{Still frames from the experimental TAMP grasp video. The language caption specifies the command, and the policy executes a sampled grasp skeleton before moving the selected object to the requested basket.}
+\includegraphics[width=0.19\linewidth]{figures/grasp_contact_snapshot_0000.png}
+\includegraphics[width=0.19\linewidth]{figures/grasp_contact_snapshot_0045.png}
+\includegraphics[width=0.19\linewidth]{figures/grasp_contact_snapshot_0080.png}
+\includegraphics[width=0.19\linewidth]{figures/grasp_contact_snapshot_0115.png}
+\includegraphics[width=0.19\linewidth]{figures/grasp_contact_snapshot_0145.png}
+\caption{Still frames from the experimental contact-rich TAMP grasp video. The language caption specifies the command, and the policy executes a sampled grasp skeleton with a MuJoCo contact gripper before moving the selected object to the requested basket.}
 \label{fig:grasp_tamp}
 \end{figure}
 
@@ -239,7 +239,7 @@ The experimental TAMP grasp extension has its own video artifact at \path{videos
 
 The main result is that the model-based perception-and-pushing executor solves the required five video tasks and succeeds on most randomized trials. The use of differential IK made the Cartesian waypoint policy smooth enough for repeated trials, and the language parser was sufficient for the command set used in this project.
 
-The main limitation is that perception is a simple calibrated color-segmentation system, so it depends on object colors and camera placement. The stable default pushing dynamics still use a planar MuJoCo force/velocity proxy during the push phase. The new contact-only path is more physically faithful and passes the larger 18/20 randomized gate, but it is much slower and still less reliable than the proxy baseline. The TAMP grasp extension demonstrates a cleaner grasp-and-place decision structure, but its default configuration still relies on the stable attachment model rather than fully tuned gripper-object contact. The behavior cloning baseline remains weak because the simple linear policy does not capture the phase-dependent structure of the task. A stronger learned version would use an image encoder, language embeddings, and a recurrent or transformer policy, while retaining the current differential IK controller as a low-level action interface.
+The main limitation is that perception is a simple calibrated color-segmentation system, so it depends on object colors and camera placement. The stable default pushing dynamics still use a planar MuJoCo force/velocity proxy during the push phase. The new contact-only path is more physically faithful and passes the larger 18/20 randomized gate, but it is much slower and still less reliable than the proxy baseline. The TAMP grasp extension demonstrates a cleaner grasp-and-place decision structure and now uses MuJoCo contact/adhesion rather than a manual attachment rule. It is still a simplified gripper model, not a fully tuned Franka finger contact model. The behavior cloning baseline remains weak because the simple linear policy does not capture the phase-dependent structure of the task. A stronger learned version would use an image encoder, language embeddings, and a recurrent or transformer policy, while retaining the current differential IK controller as a low-level action interface.
 
 \section{Code and reproducibility}
 
@@ -250,7 +250,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[mujoco]"
 .\.venv\Scripts\python.exe scripts/evaluate.py --config configs/class_panda_contact.yaml --policy push_fsm --episodes 5 --save-video videos/class_panda_contact_eval_5.gif --video-episodes 5
 .\.venv\Scripts\python.exe scripts\evaluate.py --config configs/class_panda.yaml --policy push_fsm --instruction "place the mustard bottle in the right basket" --episodes 3 --save-video videos/push_language_yellow_to_green.gif
-.\.venv\Scripts\python.exe scripts\evaluate.py --config configs/class_panda_grasp.yaml --policy tamp_grasp --episodes 5 --save-video videos/class_panda_grasp_eval_5.gif --video-episodes 5
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs/class_panda_grasp.yaml --policy tamp_grasp --episodes 5 --save-video videos/class_panda_grasp_contact_eval_5.gif --video-episodes 5
 \end{lstlisting}
 
 The most important files are:

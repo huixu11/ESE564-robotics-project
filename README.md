@@ -152,7 +152,7 @@ Current measured status on the class scene:
 - Final `push_fsm`: `5/5` required video successes, average `41.60` steps.
 - Final `push_fsm`: `20/20` randomized smoke-evaluation successes, average `38.75` steps.
 - Experimental contact-only `push_fsm` in `configs/class_panda_contact.yaml`: `18/20` randomized gate successes, success rate `0.900`, average `385.25` steps.
-- Experimental TAMP grasp path in `configs/class_panda_grasp.yaml` with `--policy tamp_grasp`: `5/5` randomized smoke successes, average `218.60` steps.
+- Experimental contact-rich TAMP grasp path in `configs/class_panda_grasp.yaml` with `--policy tamp_grasp`: `5/5` randomized successes, average `298.20` steps.
 - Legacy pick-and-place FSM: `300/300` successes, but it uses a manual attachment rule and is not the final assignment-compliance path.
 - NumPy linear BC smoke baseline: `0/20` evaluation successes.
 
@@ -195,14 +195,22 @@ Run the experimental TAMP grasp path:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\check_mujoco_setup.py --config configs\class_panda_grasp.yaml
-.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda_grasp.yaml --policy tamp_grasp --episodes 5 --out runs\class_panda_grasp_eval_5.json
+.\.venv\Scripts\python.exe scripts\evaluate.py --config configs\class_panda_grasp.yaml --policy tamp_grasp --episodes 5 --out runs\class_panda_grasp_contact_eval_5.json --save-video videos\class_panda_grasp_contact_eval_5.gif --video-episodes 5
 ```
 
 This path parses the same language commands into a symbolic
 `place(object, basket)` goal, samples object-specific grasp candidates, checks
 workspace/gripper feasibility, then executes
 `pre_grasp -> grasp -> close -> lift -> transfer -> place -> release -> retreat`.
-It is useful evidence for a grasp/TAMP direction. The default grasp config keeps
-the stable gripper attachment model enabled; optional MuJoCo contact-pad support
-exists in the scene/environment but still needs tuning before it should replace
-the current contact-push result.
+It is useful evidence for a grasp/TAMP direction. The grasp config enables a
+dedicated MuJoCo contact gripper: a dynamic tool body welded to a mocap target,
+two side pads, a top adhesive pad, and a MuJoCo adhesion actuator that turns on
+while the gripper is closed. This path does not use the manual attachment
+fallback, but it is still a simplified adhesive gripper rather than fully tuned
+Franka finger contact.
+
+The contact-rich grasp MP4 artifact is:
+
+```text
+videos/class_panda_grasp_contact_eval_5.mp4
+```
