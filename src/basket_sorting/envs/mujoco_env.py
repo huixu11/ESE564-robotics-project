@@ -106,6 +106,7 @@ class MujocoBasketSortingEnv:
 
         self.model = mujoco.MjModel.from_xml_path(str(self.model_xml))
         self._apply_option_overrides()
+        self._apply_collision_overrides()
         self.data = mujoco.MjData(self.model)
         self.names = self._resolve_names()
         self.kinematics = MujocoPandaKinematics(mujoco, self.model, self.data, self.names)
@@ -195,7 +196,7 @@ class MujocoBasketSortingEnv:
                 self.mujoco.mj_forward(self.model, self.data)
             elif self._grasp_tool_enabled():
                 start_pos = self._grasp_tool_pos()
-                target_pos = self._ee_pos()
+                target_pos = self._grasp_tool_target_pos()
                 substeps = int(self.mj_cfg.get("control_substeps", 8))
                 for step_idx in range(substeps):
                     alpha = float(step_idx + 1) / float(substeps)
@@ -460,6 +461,24 @@ class MujocoBasketSortingEnv:
                 raise KeyError(f"MuJoCo option {name!r} is not available on this model.")
             setattr(self.model.opt, name, value)
 
+    def _apply_collision_overrides(self) -> None:
+        collision_cfg = self.mj_cfg.get("arm_collision", {})
+        if not collision_cfg.get("enabled", False):
+            return
+        prefixes = tuple(collision_cfg.get("geom_prefixes", ["panda_"]))
+        suffix = str(collision_cfg.get("geom_suffix", "_collision"))
+        contype = int(collision_cfg.get("contype", 16))
+        conaffinity = int(collision_cfg.get("conaffinity", 0))
+        matched = 0
+        for geom_id in range(self.model.ngeom):
+            name = self.mujoco.mj_id2name(self.model, self.mujoco.mjtObj.mjOBJ_GEOM, geom_id) or ""
+            if name.endswith(suffix) and name.startswith(prefixes):
+                self.model.geom_contype[geom_id] = contype
+                self.model.geom_conaffinity[geom_id] = conaffinity
+                matched += 1
+        if matched == 0:
+            raise ValueError(f"arm_collision.enabled=True but no geoms matched prefixes={prefixes} suffix={suffix!r}")
+
     def _arm_joint_limits(self) -> list[list[float]]:
         limits: list[list[float]] = []
         fallback = self.config["controller"]["joint_limits"]
@@ -611,12 +630,18 @@ class MujocoBasketSortingEnv:
     def _sync_grasp_tool(self, initial: bool = False) -> None:
         if self.names.grasp_tool_mocap_id is None:
             return
-        target_pos = self._ee_pos()
+        target_pos = self._grasp_tool_target_pos()
         self._set_grasp_tool_pos(target_pos)
         self._set_grasp_tool_opening()
         self._set_adhesion_ctrl()
         if initial:
             self.last_grasp_tool_pos = target_pos.copy()
+
+    def _grasp_tool_target_pos(self) -> np.ndarray:
+        offset = np.asarray(self.mj_cfg.get("grasp_tool_ee_offset", [0.0, 0.0, 0.0]), dtype=float)
+        if offset.shape != (3,):
+            raise ValueError(f"env.mujoco.grasp_tool_ee_offset must have shape (3,), got {offset.shape}")
+        return self._ee_pos() + offset
 
     def _set_adhesion_ctrl(self) -> None:
         if not self.names.adhesion_actuator_ids:

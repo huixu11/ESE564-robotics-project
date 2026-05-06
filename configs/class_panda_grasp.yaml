@@ -64,6 +64,7 @@ env:
     control_substeps: 24
     direct_joint_position: true
     grasp_tool_body: panda_grasp_tool_target
+    grasp_tool_ee_offset: [0.0, 0.0, -0.085]
     grasp_tool_joint_names:
       - panda_grasp_left_slide
       - panda_grasp_right_slide
@@ -73,6 +74,17 @@ env:
       - panda_grasp_tool_adhesion
     adhesion_open_ctrl: 0.0
     adhesion_closed_ctrl: 1.0
+    arm_collision:
+      enabled: true
+      geom_prefixes:
+        - panda_link
+        - panda_hand
+        - panda_leftfinger
+        - panda_rightfinger
+        - panda_push_pad
+      geom_suffix: _collision
+      contype: 16
+      conaffinity: 0
     reset_settle_steps: 80
     option:
       timestep: 0.003
@@ -115,8 +127,8 @@ env:
 
 tamp_grasp:
   pre_grasp_z: 0.20
-  lift_z: 0.24
-  place_z: 0.095
+  lift_z: 0.28
+  place_z: 0.18
   retreat_z: 0.24
   max_grasp_width: 0.080
   min_lift_clearance: 0.060
@@ -131,10 +143,10 @@ tamp_grasp:
     - [0.0, -0.006]
   object_specs:
     cracker_box:
-      grasp_z: 0.060
+      grasp_z: 0.145
       grasp_width: 0.052
     mustard_bottle:
-      grasp_z: 0.046
+      grasp_z: 0.131
       grasp_width: 0.060
 
 fsm:

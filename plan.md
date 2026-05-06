@@ -212,6 +212,10 @@ the stable baselines.
      tool. The tool is a regular dynamic body welded to a mocap target, with
      side pads, a top adhesive pad, and a MuJoCo adhesion actuator that is
      active while the gripper is closed.
+   - Panda link collision geoms are enabled against the YCB objects in this
+     config. This follows the MoveIt planning-scene pattern: intentional
+     gripper/object contact is allowed, but other arm links should not pass
+     through objects silently.
 
 3. Add grasp tool support to the MuJoCo adapter.
    - Resolve optional grasp-tool mocap body and slide joints from YAML.
@@ -236,8 +240,8 @@ the stable baselines.
      the smoke gate passes.
    - Only update the report's main result if the grasp path becomes visually and
      quantitatively stronger than the contact-push path.
-   - Current contact-rich TAMP grasp result: `5/5`, success rate `1.000`,
-     average `298.20` steps, using `configs/class_panda_grasp.yaml` and
+   - Current contact-rich, collision-aware TAMP grasp result: `5/5`, success rate `1.000`,
+     average `254.60` steps, using `configs/class_panda_grasp.yaml` and
      `--policy tamp_grasp`.
 
 ## Plan to Solve Fully Contact-Rich Manipulation
@@ -326,7 +330,7 @@ as `configs/class_panda_contact.yaml`.
    - `configs/class_panda_grasp.yaml`
    - `src/basket_sorting/tamp_grasp.py`
    - `scripts/evaluate.py --policy tamp_grasp`
-   - contact-rich five-episode result: `5/5`, average `298.20` steps.
+   - contact-rich collision-aware five-episode result: `5/5`, average `254.60` steps.
 8. Remaining manual step: compile `report/final_project_report.tex` to PDF with Overleaf, MiKTeX, or TeX Live.
 9. Contact-rich MP4 generated for submission:
    `videos/class_panda_contact_eval_5.mp4`.
