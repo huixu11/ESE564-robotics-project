@@ -18,6 +18,7 @@ from basket_sorting.fsm import ScriptedPickPlaceFSM
 from basket_sorting.perception import estimate_color_positions
 from basket_sorting.push_fsm import ScriptedPushFSM
 from basket_sorting.rollout import run_episode
+from basket_sorting.tamp_grasp import ProjectTAMPGraspPlanner, ScriptedTAMPGraspPolicy
 from basket_sorting.tasks import parse_instruction
 
 
@@ -79,6 +80,32 @@ class BaselineTests(unittest.TestCase):
         }
         output = policy.act(obs)
         self.assertEqual(output.phase, "approach_push_start")
+        self.assertEqual(output.action.shape, (4,))
+
+    def test_tamp_grasp_planner_selects_feasible_candidate(self) -> None:
+        config = load_config("configs/class_panda_grasp.yaml")
+        planner = ProjectTAMPGraspPlanner(config)
+        obs = {
+            "task": parse_instruction("place the mustard bottle in the right basket"),
+            "objects": {"mustard_bottle": np.array([0.40, -0.05, 0.05], dtype=float)},
+            "baskets": {"right": np.array([0.55, 0.28, 0.035], dtype=float)},
+        }
+        plan = planner.plan(obs)
+        self.assertEqual(plan.candidate.object_name, "mustard_bottle")
+        self.assertTrue(np.allclose(plan.pre_place[:2], [0.55, 0.28]))
+        self.assertGreater(plan.lift[2], plan.grasp[2])
+
+    def test_tamp_grasp_policy_uses_shared_action_format(self) -> None:
+        config = load_config("configs/class_panda_grasp.yaml")
+        policy = ScriptedTAMPGraspPolicy(config)
+        obs = {
+            "task": parse_instruction("place the cracker box in the left basket"),
+            "ee_pos": np.array([0.35, -0.05, 0.24], dtype=float),
+            "objects": {"cracker_box": np.array([0.35, -0.05, 0.058], dtype=float)},
+            "baskets": {"left": np.array([0.25, 0.28, 0.035], dtype=float)},
+        }
+        output = policy.act(obs)
+        self.assertEqual(output.phase, "pre_grasp")
         self.assertEqual(output.action.shape, (4,))
 
     def test_mujoco_config_fails_clearly_when_dependency_missing(self) -> None:

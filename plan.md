@@ -120,6 +120,127 @@ wide pusher contact, and physically stepped control.
    - Planar pushing survey:
      https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2020.00008/full
 
+## Research Findings for Grasping with Task and Motion Planning
+
+The better long-term replacement for the pushing-only policy is not another
+single finite-state script. It is a small Task and Motion Planning (TAMP)
+pipeline: parse the language command into a symbolic goal, sample grasp and
+place parameters, reject infeasible samples with geometric checks, then execute
+the selected motion skeleton. This matches the way pick-and-place manipulation
+is usually formulated in robotics.
+
+1. TAMP is the right abstraction for this task.
+   - Garrett, Lozano-Perez, and Kaelbling's TAMP survey explains the core issue:
+     the planner must reason over both discrete decisions (`pick`, `place`,
+     object identity, basket identity) and continuous variables (grasp poses,
+     IK, collision-free paths, object poses).
+   - For this project, the symbolic layer is small, but the same structure is
+     useful: `place(mustard_bottle, right_basket)` becomes a sequence of
+     continuous grasp, lift, transfer, and release targets.
+   - Reference:
+     https://www.annualreviews.org/content/journals/10.1146/annurev-control-091420-084139
+
+2. PDDLStream is the closest research template.
+   - PDDLStream represents unknown continuous values as black-box streams. A
+     task planner can request a grasp sample, an IK sample, or a collision-free
+     trajectory sample, and only feasible samples become symbolic facts.
+   - The project does not need a full PDDLStream dependency, but it should copy
+     the idea: generated grasp candidates become usable only after simple
+     reachability, gripper-width, workspace, and clearance tests.
+   - References:
+     https://icaps20.icaps-conference.org/paper186.html
+     https://github.com/caelan/pddlstream
+
+3. MoveIt Task Constructor gives the practical software pattern.
+   - MoveIt decomposes pick/place into named stages: current state, grasp pose
+     generation, IK, approach, attach/grasp, lift, place pose generation,
+     release, and retreat.
+   - The project-specific version can use the same stage names without adopting
+     ROS: `plan`, `pre_grasp`, `grasp`, `close`, `lift`, `transfer`, `place`,
+     `release`, `retreat`.
+   - Reference:
+     https://moveit.github.io/moveit_task_constructor/tutorials/pick-and-place.html
+
+4. Robust grasp synthesis is usually separated from execution.
+   - Dex-Net/GQ-CNN and Contact-GraspNet learn or score grasp candidates from
+     depth/point-cloud observations. They are stronger than this project needs,
+     but they support the design choice of treating grasp generation as a
+     candidate-sampling module rather than hard-coding one hand pose.
+   - A future upgrade could replace the hand-written candidate sampler with a
+     learned grasp scorer while keeping the same TAMP/execution interface.
+   - References:
+     https://bair.berkeley.edu/blog/2017/06/27/dexnet-2.0/
+     https://research.nvidia.com/publication/2021-03_contact-graspnet-efficient-6-dof-grasp-generation-cluttered-scenes
+
+5. My project-specific conclusion.
+   - The current contact-push path is defensible and already passes `18/20`, but
+     it still looks like pushing. A grasping path should be developed as a
+     separate experimental config so it cannot destabilize the submitted push
+     baseline.
+   - The first useful implementation should be a small TAMP grasp policy, not a
+     full external TAMP planner. It should expose the planner stages clearly in
+     logs/videos and keep all parameters in YAML.
+   - The correct acceptance gate is: setup loads, unit tests pass, one fixed
+     language command executes with the TAMP grasp skeleton, then expand to
+     randomized grasp trials. A contact-only grasp gate should be added before
+     claiming fully physical grasping. It should not replace the final pushing
+     result until it is at least as stable as the current contact-push path.
+
+## Plan to Add a Grasp/TAMP Path
+
+This is an experimental upgrade path for grasping instead of pushing. It keeps
+`configs/class_panda.yaml` and `configs/class_panda_contact.yaml` unchanged as
+the stable baselines.
+
+1. Add a project-specific TAMP grasp policy.
+   - Parse the existing language command into a symbolic goal:
+     `place(target_object, target_basket)`.
+   - Generate object-specific grasp candidates using perceived object pose,
+     object dimensions, candidate z offsets, and gripper-width limits.
+   - Reject candidates outside the workspace, candidates wider than the gripper,
+     and candidates whose pre-grasp/lift/place waypoints violate simple
+     clearance constraints.
+   - Execute the selected skeleton:
+     `pre_grasp -> grasp -> close -> lift -> transfer -> place -> release -> retreat`.
+
+2. Add a separate MuJoCo grasp config.
+   - New config: `configs/class_panda_grasp.yaml`.
+   - Disable `physics_push`.
+   - Use the same class Panda/YCB scene and overhead color perception.
+   - Use the new `tamp_grasp` policy rather than the pushing FSM.
+   - Current default status: the config uses the existing gripper attachment
+     model for a stable TAMP grasp demonstration. Optional MuJoCo contact-pad
+     infrastructure has been added to the scene/environment, but it remains
+     disabled in this default config because the first contact-only grasp test
+     disturbed objects before closing.
+
+3. Add grasp tool support to the MuJoCo adapter.
+   - Resolve optional grasp-tool mocap body and slide joints from YAML.
+   - Move the grasp tool with small MuJoCo steps, the same way the contact
+     pusher path is physically stepped.
+   - Drive the contact pads from open/closed gripper commands.
+   - Keep the legacy manual attachment behavior only for configs that do not
+     enable the grasp tool or contact pusher.
+   - Current status: implemented as optional infrastructure. It should be tuned
+     further before being used as a reported result.
+
+4. Add validation tests.
+   - Unit test the TAMP planner candidate selection.
+   - Unit test that the `tamp_grasp` policy emits the shared action format.
+   - Run the existing test suite after implementation.
+
+5. Experimental evaluation gate.
+   - First gate: `scripts/check_mujoco_setup.py --config configs/class_panda_grasp.yaml`.
+   - Second gate: one fixed command, for example
+     `place the mustard bottle in the right basket`.
+   - Third gate: five randomized smoke episodes, then a five-episode video if
+     the smoke gate passes.
+   - Only update the report's main result if the grasp path becomes visually and
+     quantitatively stronger than the contact-push path.
+   - Current TAMP grasp smoke result: `5/5`, success rate `1.000`, average
+     `218.60` steps, using `configs/class_panda_grasp.yaml` and
+     `--policy tamp_grasp`.
+
 ## Plan to Solve Fully Contact-Rich Manipulation
 
 The practical way to remove the proxy is to treat contact pushing as its own
@@ -202,8 +323,13 @@ as `configs/class_panda_contact.yaml`.
    - red/cracker box to blue/left basket,
    - yellow/mustard bottle to green/right basket.
 6. README and report now describe `push_fsm` as the final path.
-7. Remaining manual step: compile `report/final_project_report.tex` to PDF with Overleaf, MiKTeX, or TeX Live.
-8. Contact-rich MP4 generated for submission:
+7. Experimental TAMP grasp path added:
+   - `configs/class_panda_grasp.yaml`
+   - `src/basket_sorting/tamp_grasp.py`
+   - `scripts/evaluate.py --policy tamp_grasp`
+   - five-episode smoke result: `5/5`, average `218.60` steps.
+8. Remaining manual step: compile `report/final_project_report.tex` to PDF with Overleaf, MiKTeX, or TeX Live.
+9. Contact-rich MP4 generated for submission:
    `videos/class_panda_contact_eval_5.mp4`.
 
 ## Remaining Submission Plan

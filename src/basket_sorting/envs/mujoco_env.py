@@ -40,6 +40,9 @@ class _ResolvedNames:
     perception_camera_id: int | None
     contact_pusher_body_id: int | None
     contact_pusher_mocap_id: int | None
+    grasp_tool_body_id: int | None
+    grasp_tool_mocap_id: int | None
+    grasp_tool_qpos_addr: np.ndarray
     base_qpos_addr: int | None
     base_dof_addr: int | None
 
@@ -122,6 +125,7 @@ class MujocoBasketSortingEnv:
         self.last_perceived_objects: dict[str, np.ndarray] = {}
         self.last_perceived_baskets: dict[str, np.ndarray] = {}
         self.last_contact_pusher_pos: np.ndarray | None = None
+        self.last_grasp_tool_pos: np.ndarray | None = None
         self.base_qpos0: np.ndarray | None = None
         self.phase = "reset"
 
@@ -149,10 +153,12 @@ class MujocoBasketSortingEnv:
         self.last_perceived_objects = {}
         self.last_perceived_baskets = {}
         self.last_contact_pusher_pos = None
+        self.last_grasp_tool_pos = None
         self.base_qpos0 = self._base_qpos().copy()
         self.last_ik_success = True
         self.phase = "reset"
         self._sync_contact_pusher(initial=True)
+        self._sync_grasp_tool(initial=True)
         self._settle_scene(int(self.mj_cfg.get("reset_settle_steps", 0)), initial_qpos)
         return self._observation()
 
@@ -185,6 +191,20 @@ class MujocoBasketSortingEnv:
                     self.mujoco.mj_step(self.model, self.data)
                     self._lock_direct_robot_state(target_qpos)
                 self.last_contact_pusher_pos = target_pos.copy()
+                self.mujoco.mj_forward(self.model, self.data)
+            elif self._grasp_tool_enabled():
+                start_pos = self._grasp_tool_pos()
+                target_pos = self._ee_pos()
+                substeps = int(self.mj_cfg.get("control_substeps", 8))
+                for step_idx in range(substeps):
+                    alpha = float(step_idx + 1) / float(substeps)
+                    self._lock_direct_robot_state(target_qpos)
+                    self._set_grasp_tool_opening()
+                    self._set_grasp_tool_pos(start_pos * (1.0 - alpha) + target_pos * alpha)
+                    self.mujoco.mj_step(self.model, self.data)
+                    self._lock_direct_robot_state(target_qpos)
+                    self._set_grasp_tool_opening()
+                self.last_grasp_tool_pos = target_pos.copy()
                 self.mujoco.mj_forward(self.model, self.data)
             else:
                 self._update_attachment()
@@ -377,6 +397,22 @@ class MujocoBasketSortingEnv:
         if contact_pusher_body_id >= 0:
             mocap_id = int(self.model.body_mocapid[contact_pusher_body_id])
             contact_pusher_mocap_id = mocap_id if mocap_id >= 0 else None
+        grasp_tool_name = self.mj_cfg.get("grasp_tool_body")
+        grasp_tool_body_id = (
+            self._name_id(self.mujoco.mjtObj.mjOBJ_BODY, grasp_tool_name, required=False)
+            if grasp_tool_name
+            else -1
+        )
+        grasp_tool_mocap_id = None
+        if grasp_tool_body_id >= 0:
+            mocap_id = int(self.model.body_mocapid[grasp_tool_body_id])
+            grasp_tool_mocap_id = mocap_id if mocap_id >= 0 else None
+        grasp_tool_joint_ids = [
+            self._name_id(self.mujoco.mjtObj.mjOBJ_JOINT, name, required=False)
+            for name in self.mj_cfg.get("grasp_tool_joint_names", [])
+        ]
+        grasp_tool_joint_ids = [idx for idx in grasp_tool_joint_ids if idx >= 0]
+        grasp_tool_qpos_addr = np.asarray([self.model.jnt_qposadr[joint_id] for joint_id in grasp_tool_joint_ids], dtype=int)
         base_joint_name = self.mj_cfg.get("base_joint_name", "floating_base")
         base_joint_id = self._name_id(self.mujoco.mjtObj.mjOBJ_JOINT, base_joint_name, required=False)
         base_qpos_addr = int(self.model.jnt_qposadr[base_joint_id]) if base_joint_id >= 0 else None
@@ -398,6 +434,9 @@ class MujocoBasketSortingEnv:
             perception_camera_id=perception_camera_id,
             contact_pusher_body_id=contact_pusher_body_id if contact_pusher_body_id >= 0 else None,
             contact_pusher_mocap_id=contact_pusher_mocap_id,
+            grasp_tool_body_id=grasp_tool_body_id if grasp_tool_body_id >= 0 else None,
+            grasp_tool_mocap_id=grasp_tool_mocap_id,
+            grasp_tool_qpos_addr=grasp_tool_qpos_addr,
             base_qpos_addr=base_qpos_addr,
             base_dof_addr=base_dof_addr,
         )
@@ -471,6 +510,7 @@ class MujocoBasketSortingEnv:
             if not self.gripper_open:
                 ctrl_value = float(self.mj_cfg.get("closed_gripper_ctrl", 0.0))
             self.data.qpos[self.names.gripper_qpos_addr] = ctrl_value
+        self._set_grasp_tool_opening()
 
     def _settle_scene(self, steps: int, arm_qpos: np.ndarray) -> None:
         for _ in range(max(0, int(steps))):
@@ -501,6 +541,8 @@ class MujocoBasketSortingEnv:
             self.data.ctrl[actuator_id] = ctrl_value
         if self.mj_cfg.get("direct_joint_position", False) and len(self.names.gripper_qpos_addr):
             self.data.qpos[self.names.gripper_qpos_addr] = ctrl_value
+        self._set_grasp_tool_opening()
+        if self.mj_cfg.get("direct_joint_position", False) and (len(self.names.gripper_qpos_addr) or len(self.names.grasp_tool_qpos_addr)):
             self.mujoco.mj_forward(self.model, self.data)
 
     def _push_proxy_enabled(self) -> bool:
@@ -508,6 +550,9 @@ class MujocoBasketSortingEnv:
 
     def _contact_pusher_enabled(self) -> bool:
         return self.names.contact_pusher_mocap_id is not None
+
+    def _grasp_tool_enabled(self) -> bool:
+        return self.names.grasp_tool_mocap_id is not None
 
     def _contact_pusher_pos(self) -> np.ndarray:
         if self.names.contact_pusher_mocap_id is None:
@@ -529,6 +574,39 @@ class MujocoBasketSortingEnv:
         self._set_contact_pusher_pos(target_pos)
         if initial:
             self.last_contact_pusher_pos = target_pos.copy()
+
+    def _grasp_tool_pos(self) -> np.ndarray:
+        if self.names.grasp_tool_mocap_id is None:
+            return self._ee_pos()
+        if self.last_grasp_tool_pos is not None:
+            return self.last_grasp_tool_pos.copy()
+        return np.asarray(self.data.mocap_pos[self.names.grasp_tool_mocap_id], dtype=float).copy()
+
+    def _set_grasp_tool_pos(self, pos: np.ndarray) -> None:
+        if self.names.grasp_tool_mocap_id is None:
+            return
+        self.data.mocap_pos[self.names.grasp_tool_mocap_id] = np.asarray(pos, dtype=float)
+        self.data.mocap_quat[self.names.grasp_tool_mocap_id] = np.array([1.0, 0.0, 0.0, 0.0], dtype=float)
+
+    def _set_grasp_tool_opening(self) -> None:
+        if not len(self.names.grasp_tool_qpos_addr):
+            return
+        key = "grasp_tool_open_qpos" if self.gripper_open else "grasp_tool_closed_qpos"
+        values = np.asarray(self.mj_cfg.get(key, [0.0] * len(self.names.grasp_tool_qpos_addr)), dtype=float)
+        if values.shape != self.names.grasp_tool_qpos_addr.shape:
+            raise ValueError(
+                f"env.mujoco.{key} must have shape {self.names.grasp_tool_qpos_addr.shape}, got {values.shape}"
+            )
+        self.data.qpos[self.names.grasp_tool_qpos_addr] = values
+
+    def _sync_grasp_tool(self, initial: bool = False) -> None:
+        if self.names.grasp_tool_mocap_id is None:
+            return
+        target_pos = self._ee_pos()
+        self._set_grasp_tool_pos(target_pos)
+        self._set_grasp_tool_opening()
+        if initial:
+            self.last_grasp_tool_pos = target_pos.copy()
 
     def _apply_push_proxy(self, action_arr: np.ndarray) -> None:
         self.data.xfrc_applied[:] = 0.0

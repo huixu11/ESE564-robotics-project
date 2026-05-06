@@ -13,12 +13,13 @@ from basket_sorting.fsm import ScriptedPickPlaceFSM
 from basket_sorting.policies import LinearBCPolicy
 from basket_sorting.push_fsm import ScriptedPushFSM
 from basket_sorting.rollout import run_episode
+from basket_sorting.tamp_grasp import ScriptedTAMPGraspPolicy
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate FSM or BC policy.")
     parser.add_argument("--config", default=None)
-    parser.add_argument("--policy", choices=["fsm", "push_fsm", "linear_bc"], default="fsm")
+    parser.add_argument("--policy", choices=["fsm", "push_fsm", "tamp_grasp", "linear_bc"], default="fsm")
     parser.add_argument("--model", default="models/state_linear_bc.npz")
     parser.add_argument("--episodes", type=int, default=50)
     parser.add_argument("--seed", type=int, default=500)
@@ -44,6 +45,8 @@ def main() -> None:
             policy = ScriptedPickPlaceFSM(config)
         elif args.policy == "push_fsm":
             policy = ScriptedPushFSM(config)
+        elif args.policy == "tamp_grasp":
+            policy = ScriptedTAMPGraspPolicy(config)
         else:
             policy = LinearBCPolicy(args.model, config)
         try:

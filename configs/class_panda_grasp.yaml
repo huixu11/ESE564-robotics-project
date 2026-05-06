@@ -1,0 +1,142 @@
+env:
+  name: mujoco
+  max_steps: 700
+  table_bounds:
+    x: [0.24, 0.56]
+    y: [-0.20, 0.06]
+  workspace_bounds:
+    x: [0.05, 0.75]
+    y: [-0.45, 0.45]
+    z: [0.02, 0.75]
+  safe_z: 0.24
+  grasp_z: 0.060
+  place_z: 0.085
+  object_spawn_z:
+    cracker_box: 0.058
+    mustard_bottle: 0.050
+  object_min_distance: 0.19
+  basket_half_extent: 0.105
+  grasp_radius: 0.055
+  camera:
+    width: 320
+    height: 320
+  perception:
+    enabled: true
+    camera_name: overhead
+    min_pixels: 20
+    image_to_world_affine:
+      - [0.0017647, -0.00378195, 0.60149898]
+      - [-0.00268734, -0.00116214, 0.62269681]
+    object_affines:
+      cracker_box:
+        - [0.00277955, 0.00004454, -0.08799663]
+        - [-0.00006609, -0.00254292, 0.42511252]
+      mustard_bottle:
+        - [0.00306834, 0.00003555, -0.13909816]
+        - [-0.00007015, -0.00304209, 0.50605041]
+    color_masks:
+      cracker_box:
+        lower: [220, 0, 0]
+        upper: [255, 90, 90]
+        min_saturation: 80
+        dominant_channel: 0
+        min_channel_margin: 80
+      mustard_bottle:
+        lower: [220, 220, 0]
+        upper: [255, 255, 90]
+        min_saturation: 80
+      left:
+        lower: [40, 70, 80]
+        upper: [150, 190, 210]
+      right:
+        lower: [40, 80, 50]
+        upper: [150, 190, 150]
+  physics_push:
+    enabled: false
+  basket_poses:
+    left: [0.25, 0.28, 0.035]
+    right: [0.55, 0.28, 0.035]
+  mujoco:
+    model_xml: assets/class_panda/basket_scene.mjcf
+    ee_site: null
+    ee_body: panda_hand
+    camera_name: demo_view
+    control_substeps: 24
+    direct_joint_position: true
+    grasp_tool_body: null
+    grasp_tool_joint_names: []
+    grasp_tool_open_qpos: []
+    grasp_tool_closed_qpos: []
+    reset_settle_steps: 80
+    option:
+      timestep: 0.003
+      iterations: 80
+      noslip_iterations: 20
+    initial_qpos: [0.0, -0.75, 0.0, -2.35, 0.0, 1.65, 0.78]
+    arm_joint_names:
+      - panda_joint1
+      - panda_joint2
+      - panda_joint3
+      - panda_joint4
+      - panda_joint5
+      - panda_joint6
+      - panda_joint7
+    arm_actuator_names:
+      - panda_joint1_pos
+      - panda_joint2_pos
+      - panda_joint3_pos
+      - panda_joint4_pos
+      - panda_joint5_pos
+      - panda_joint6_pos
+      - panda_joint7_pos
+    gripper_actuator_names:
+      - panda_finger_joint1_pos
+      - panda_finger_joint2_pos
+    gripper_joint_names:
+      - panda_finger_joint1
+      - panda_finger_joint2
+    open_gripper_ctrl: 0.04
+    closed_gripper_ctrl: 0.0
+    object_body_names:
+      cracker_box: cracker_box
+      mustard_bottle: mustard_bottle
+    object_free_joint_names:
+      cracker_box: cracker_box_freejoint
+      mustard_bottle: mustard_bottle_freejoint
+    basket_body_names:
+      left: left_basket
+      right: right_basket
+
+tamp_grasp:
+  pre_grasp_z: 0.20
+  lift_z: 0.24
+  place_z: 0.095
+  retreat_z: 0.24
+  max_grasp_width: 0.080
+  min_lift_clearance: 0.060
+  close_steps: 24
+  release_steps: 16
+  candidate_z_offsets: [0.0, 0.006, -0.004]
+  candidate_xy_offsets:
+    - [0.0, 0.0]
+    - [0.006, 0.0]
+    - [-0.006, 0.0]
+    - [0.0, 0.006]
+    - [0.0, -0.006]
+  object_specs:
+    cracker_box:
+      grasp_z: 0.060
+      grasp_width: 0.052
+    mustard_bottle:
+      grasp_z: 0.052
+      grasp_width: 0.060
+
+fsm:
+  tolerance: 0.016
+  grasp_hold_steps: 12
+  release_hold_steps: 10
+  retreat_steps: 10
+  speed_to_step:
+    careful: 0.005
+    normal: 0.006
+    fast: 0.007
