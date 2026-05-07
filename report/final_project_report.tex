@@ -260,12 +260,12 @@ The most important files are:
   \item \path{README.md}: installation and evaluation instructions.
   \item \path{configs/class_panda.yaml}: final class Panda scene configuration.
   \item \path{configs/class_panda_contact.yaml}: experimental contact-only class Panda configuration.
-  \item \path{configs/class_panda_grasp.yaml}: experimental TAMP grasp configuration.
+  \item \path{configs/class_panda_grasp.yaml}: experimental TAMP+RRT grasp configuration.
   \item \path{assets/class_panda/basket_scene.mjcf}: MuJoCo scene with Panda, YCB objects, baskets, and demo camera.
   \item \path{src/basket_sorting/perception.py}: color-based object perception.
   \item \path{src/basket_sorting/push_fsm.py}: final scripted pushing policy.
-  \item \path{src/basket_sorting/tamp_grasp.py}: experimental TAMP grasp planner and policy.
-  \item \path{src/basket_sorting/rrt.py}: RRT-Connect workspace planner used by the grasp extension.
+  \item \path{src/basket_sorting/tamp_grasp.py}: experimental TAMP grasp planner and policy that calls RRT-Connect for approach, transfer, and retreat paths.
+  \item \path{src/basket_sorting/rrt.py}: RRT-Connect end-effector workspace planner used by the grasp extension.
   \item \path{src/basket_sorting/envs/mujoco_env.py}: MuJoCo environment and differential IK integration.
   \item \path{scripts/evaluate.py}: evaluation entry point.
   \item \path{scripts/perception_sanity.py}: perception localization metric.
